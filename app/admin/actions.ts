@@ -49,8 +49,8 @@ export async function fetchAdminOverviewData(): Promise<{
   await requireSuperAdminProfile();
   const supabase = await createClient();
 
-  const [statsRes, { data: recentRuns }] = await Promise.all([
-    callAdminEdgeFunction<{ stats: AdminStats }>({ action: "get_stats" }),
+  const [{ data: rpcStats, error: rpcError }, { data: recentRuns }] = await Promise.all([
+    supabase.rpc("get_admin_dashboard_stats"),
     supabase
       .from("polling_runs")
       .select("id, started_at, status, routes_succeeded, routes_failed, notifications_sent")
@@ -58,9 +58,19 @@ export async function fetchAdminOverviewData(): Promise<{
       .limit(14),
   ]);
 
+  if (!rpcError && rpcStats) {
+    return {
+      ok: true,
+      stats: rpcStats as unknown as AdminStats,
+      recentRuns: (recentRuns ?? []) as PollingRunRow[],
+    };
+  }
+
+  const edgeRes = await callAdminEdgeFunction<{ stats: AdminStats }>({ action: "get_stats" });
+
   return {
-    ok: statsRes.ok,
-    stats: statsRes.ok ? statsRes.data.stats : null,
+    ok: edgeRes.ok,
+    stats: edgeRes.ok ? edgeRes.data.stats : null,
     recentRuns: (recentRuns ?? []) as PollingRunRow[],
   };
 }
