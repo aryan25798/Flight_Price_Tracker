@@ -1,0 +1,281 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  /* Luxury Dark / Midnight Aerospace Foundation (Default Theme) */
+  --bg-deep: #070B14;
+  --bg-surface: #0B1120;
+  --bg-surface-elevated: #10192D;
+  
+  --background: #080C17;
+  --foreground: #F8FAFC;
+  
+  --card: #0D1527;
+  --card-foreground: #F8FAFC;
+  
+  --muted: #131E35;
+  --muted-foreground: #94A3B8;
+  
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --border-subtle: rgba(255, 255, 255, 0.04);
+  
+  --glass-surface-1: rgba(13, 21, 39, 0.72);
+  --glass-surface-2: rgba(18, 28, 51, 0.65);
+  --glass-surface-3: rgba(24, 38, 68, 0.55);
+  --glass-surface-floating: rgba(10, 16, 30, 0.92);
+  
+  --glass-highlight: rgba(255, 255, 255, 0.08);
+  --glass-glow-sky: rgba(56, 189, 248, 0.15);
+  --glass-glow-indigo: rgba(99, 102, 241, 0.12);
+  
+  --primary: #38BDF8;
+  --primary-hover: #0284C7;
+  --primary-foreground: #080C16;
+  
+  --accent-blue: #2563EB;
+  --accent-sky: #38BDF8;
+  --accent-cyan: #06B6D4;
+  
+  --success: #10B981;
+  --success-foreground: #FFFFFF;
+  
+  --warning: #F59E0B;
+  --warning-foreground: #FFFFFF;
+  
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
+
+  --ring: rgba(56, 189, 248, 0.4);
+}
+
+.dark {
+  --bg-deep: #070B14;
+  --bg-surface: #0B1120;
+  --bg-surface-elevated: #10192D;
+  
+  --background: #080C17;
+  --foreground: #F8FAFC;
+  
+  --card: #0D1527;
+  --card-foreground: #F8FAFC;
+  
+  --muted: #131E35;
+  --muted-foreground: #94A3B8;
+  
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --border-subtle: rgba(255, 255, 255, 0.04);
+  
+  --glass-surface-1: rgba(13, 21, 39, 0.75);
+  --glass-surface-2: rgba(18, 28, 51, 0.68);
+  --glass-surface-3: rgba(24, 38, 68, 0.58);
+  --glass-surface-floating: rgba(10, 16, 30, 0.94);
+  
+  --glass-highlight: rgba(255, 255, 255, 0.08);
+  --glass-glow-sky: rgba(56, 189, 248, 0.15);
+  --glass-glow-indigo: rgba(99, 102, 241, 0.12);
+  
+  --primary: #38BDF8;
+  --primary-hover: #0284C7;
+  --primary-foreground: #080C16;
+  
+  --success: #10B981;
+  --success-foreground: #FFFFFF;
+  
+  --warning: #F59E0B;
+  --warning-foreground: #FFFFFF;
+  
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
+
+  --ring: rgba(56, 189, 248, 0.4);
+}
+
+/* Light Theme Override (Architectural Frost) */
+:root:not(.dark) {
+  --bg-deep: #F1F5F9;
+  --bg-surface: #F8FAFC;
+  --bg-surface-elevated: #FFFFFF;
+  
+  --background: #F8FAFC;
+  --foreground: #090D1A;
+  
+  --card: #FFFFFF;
+  --card-foreground: #090D1A;
+  
+  --muted: #E2E8F0;
+  --muted-foreground: #64748B;
+  
+  --border: rgba(15, 23, 42, 0.09);
+  --border-strong: rgba(15, 23, 42, 0.18);
+  --border-subtle: rgba(15, 23, 42, 0.05);
+  
+  --glass-surface-1: rgba(255, 255, 255, 0.82);
+  --glass-surface-2: rgba(248, 250, 252, 0.78);
+  --glass-surface-3: rgba(241, 245, 249, 0.72);
+  --glass-surface-floating: rgba(255, 255, 255, 0.96);
+  
+  --glass-highlight: rgba(255, 255, 255, 0.6);
+  --glass-glow-sky: rgba(2, 132, 199, 0.08);
+  --glass-glow-indigo: rgba(79, 70, 229, 0.06);
+  
+  --primary: #0284C7;
+  --primary-hover: #0369A1;
+  --primary-foreground: #FFFFFF;
+  
+  --ring: rgba(2, 132, 199, 0.35);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
+}
+
+/* =========================================================================
+   LUXURY GLASSMORPHISM ARCHITECTURE & SURFACE ELEVATION SYSTEM
+   ========================================================================= */
+
+/* Atmospheric Radial Mesh Background */
+.ambient-night-mesh {
+  background: 
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(37, 99, 235, 0.16), transparent 70%),
+    radial-gradient(ellipse 60% 40% at 90% 20%, rgba(6, 182, 212, 0.10), transparent 60%),
+    radial-gradient(ellipse 50% 50% at 10% 80%, rgba(59, 130, 246, 0.08), transparent 60%),
+    var(--background);
+  background-attachment: fixed;
+}
+
+/* Tier 1: Foundation Glass Panel (Cards, dashboard sections) */
+.glass-panel,
+.glass-surface-1 {
+  background: var(--glass-surface-1);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border);
+  box-shadow: 
+    0 4px 24px -1px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 0 var(--glass-highlight);
+}
+
+/* Tier 2: Nested Elevated Surface (Inner widgets, search console, metric blocks) */
+.glass-surface-2 {
+  background: var(--glass-surface-2);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--border);
+  box-shadow: 
+    0 8px 32px -4px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 0 var(--glass-highlight);
+}
+
+/* Tier 3: High-Interactive Surface (Inputs, pills, hoverable items) */
+.glass-surface-3 {
+  background: var(--glass-surface-3);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  box-shadow: inset 0 1px 0 0 var(--glass-highlight);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-surface-3:hover {
+  border-color: var(--border-strong);
+  background: color-mix(in srgb, var(--glass-surface-3) 90%, white 10%);
+}
+
+/* Tier 4: Floating Luxury Glass (Modals, dialogs, dropdown popovers) */
+.glass-floating {
+  background: var(--glass-surface-floating);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--border-strong);
+  box-shadow: 
+    0 24px 64px -12px rgba(0, 0, 0, 0.75),
+    0 0 0 1px rgba(255, 255, 255, 0.06),
+    inset 0 1px 0 0 var(--glass-highlight);
+}
+
+/* Interactive Card with Soft Aerospace Lighting */
+.glass-card-interactive {
+  background: var(--glass-surface-1);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--border);
+  box-shadow: 
+    0 4px 20px -2px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 0 var(--glass-highlight);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-card-interactive:hover {
+  border-color: rgba(56, 189, 248, 0.35);
+  box-shadow: 
+    0 12px 36px -4px rgba(0, 0, 0, 0.45),
+    0 0 24px -4px rgba(56, 189, 248, 0.15),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.14);
+  transform: translateY(-2px);
+}
+
+/* Glowing Primary Action Button */
+.btn-glass-primary {
+  background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 50%, #0284C7 100%);
+  color: #FFFFFF;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 
+    0 4px 16px -2px rgba(37, 99, 235, 0.45),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.25);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-glass-primary:hover {
+  background: linear-gradient(135deg, #3B82F6 0%, #2563EB 50%, #0369A1 100%);
+  box-shadow: 
+    0 8px 24px -2px rgba(37, 99, 235, 0.6),
+    0 0 20px 2px rgba(56, 189, 248, 0.3),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.35);
+  transform: translateY(-1px);
+}
+
+.btn-glass-primary:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px -1px rgba(37, 99, 235, 0.4);
+}
+
+/* Sleek Translucent Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.24);
+}
+
+/* Respect Accessibility & Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
