@@ -48,34 +48,19 @@ export async function updateUserTierAction(params: {
   customTrackerLimit: number | null;
   tierNotes?: string | null;
 }): Promise<{ ok: boolean; error?: string }> {
-  const { user } = await requireSuperAdminProfile();
+  await requireSuperAdminProfile();
   const supabase = await createClient();
 
-  const { error } = await supabase
-    .from("profiles")
-    .update({
-      tier: params.tier,
-      custom_tracker_limit: params.customTrackerLimit,
-      tier_notes: params.tierNotes ?? null,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", params.userId);
+  const { error } = await supabase.rpc("admin_update_user_tier", {
+    p_user_id: params.userId,
+    p_tier: params.tier,
+    p_custom_tracker_limit: params.customTrackerLimit,
+    p_tier_notes: params.tierNotes ?? null,
+  });
 
   if (error) {
     return { ok: false, error: error.message };
   }
-
-  // Record immutable admin audit log
-  await supabase.from("admin_audit_logs").insert({
-    admin_id: user.id,
-    action: "update_user_tier",
-    target_id: params.userId,
-    metadata: {
-      new_tier: params.tier,
-      custom_tracker_limit: params.customTrackerLimit,
-      tier_notes: params.tierNotes,
-    },
-  });
 
   revalidatePath("/admin/users");
   revalidatePath("/admin");
