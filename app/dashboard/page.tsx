@@ -72,6 +72,33 @@ export default async function DashboardPage({
   const telegramLinked = Boolean(profile.telegram_chat_id);
   const displayName = profile.email?.split("@")[0] || "Traveler";
 
+  // User Tier & Quota Calculation
+  const isSuperAdmin = profile.role === "super_admin";
+  const userTier = profile.tier || "free";
+  const isUnlimited =
+    isSuperAdmin ||
+    profile.custom_tracker_limit === -1 ||
+    (userTier === "enterprise" && profile.custom_tracker_limit === null);
+
+  const effectiveLimit = isUnlimited
+    ? -1
+    : profile.custom_tracker_limit !== null && profile.custom_tracker_limit !== undefined
+      ? profile.custom_tracker_limit
+      : userTier === "pro"
+        ? 25
+        : 3;
+
+  const currentActive = activeCount ?? 0;
+  const remaining = isUnlimited ? 9999 : Math.max(0, effectiveLimit - currentActive);
+
+  const userQuota = {
+    tier: userTier,
+    effective_limit: effectiveLimit,
+    current_count: currentActive,
+    is_unlimited: isUnlimited,
+    remaining,
+  };
+
   // Calculate Best Deal route or lowest recorded fare from trackers
   const lowestFareTracker = trackers.reduce<TrackedFlight | null>((best, curr) => {
     if (!curr.last_seen_price) return best;
@@ -91,7 +118,9 @@ export default async function DashboardPage({
                 <span>Live Flight Radar</span>
               </span>
               <span className="text-xs text-[var(--muted-foreground)]">
-                {profile.role === "super_admin" ? "Superuser Mode" : "Standard Plan · 10 Active Routes"}
+                {isUnlimited
+                  ? `${isSuperAdmin ? "Super Admin" : "Enterprise VIP"} · Unlimited Trackers (∞)`
+                  : `${userTier === "pro" ? "Pro Plan" : "Free Tier"} · ${currentActive}/${effectiveLimit} Active Trackers`}
               </span>
             </div>
 
@@ -145,16 +174,21 @@ export default async function DashboardPage({
               <Plane className="h-4 w-4" />
             </div>
           </div>
-          <div className="flex items-baseline gap-2">
+          <div className="flex items-baseline gap-1.5">
             <span className="text-2xl sm:text-3xl font-extrabold tabular-nums text-[var(--foreground)]">
-              {activeCount ?? 0}
+              {currentActive}
             </span>
-            <span className="text-xs font-semibold text-emerald-400 flex items-center">
+            <span className="text-xs font-semibold text-[var(--muted-foreground)]">
+              / {isUnlimited ? "∞" : effectiveLimit}
+            </span>
+            <span className="text-xs font-semibold text-emerald-400 flex items-center ml-auto">
               ↑ live
             </span>
           </div>
           <p className="text-[11px] text-[var(--muted-foreground)] truncate">
-            {totalCount ?? 0} total · {pausedCount ?? 0} paused
+            {isUnlimited
+              ? `${totalCount ?? 0} total · uncapped quota`
+              : `${remaining} remaining · ${totalCount ?? 0} total`}
           </p>
         </div>
 
@@ -224,7 +258,11 @@ export default async function DashboardPage({
 
       {/* Flight Search & Route Configuration Form ("Track Your Next Flight") */}
       <section aria-label="Add new route to monitor">
-        <FlightSearchForm initialOrigin={params.origin} initialDestination={params.destination} />
+        <FlightSearchForm
+          initialOrigin={params.origin}
+          initialDestination={params.destination}
+          quotaInfo={userQuota}
+        />
       </section>
 
       {/* Active & Historical Trackers Section ("Your Active Flight Trackers") */}

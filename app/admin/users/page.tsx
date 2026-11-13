@@ -1,5 +1,4 @@
-import { requireSuperAdminProfile } from "@/lib/supabase/server";
-import { callAdminEdgeFunction } from "@/services/admin/admin-api";
+import { createClient, requireSuperAdminProfile } from "@/lib/supabase/server";
 import { UsersManager } from "@/components/admin/users-manager";
 import type { Profile } from "@/types/database";
 
@@ -17,25 +16,31 @@ export default async function AdminUsersPage({
   const status =
     params.status === "active" || params.status === "banned" ? params.status : "all";
 
-  const res = await callAdminEdgeFunction<{
-    users: Profile[];
-    total: number;
-    page: number;
-    pageSize: number;
-  }>({
-    action: "list_users",
-    page,
-    pageSize: PAGE_SIZE,
-    ...(search ? { search } : {}),
-    status,
-  });
+  const supabase = await createClient();
+  let query = supabase
+    .from("profiles")
+    .select(
+      "id, email, role, tier, custom_tracker_limit, tier_notes, is_banned, telegram_chat_id, created_at, updated_at",
+      { count: "exact" },
+    )
+    .order("created_at", { ascending: false })
+    .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
 
-  const data = res.ok ? res.data : { users: [], total: 0, page, pageSize: PAGE_SIZE };
+  if (search) {
+    query = query.ilike("email", `%${search}%`);
+  }
+  if (status === "active") {
+    query = query.eq("is_banned", false);
+  } else if (status === "banned") {
+    query = query.eq("is_banned", true);
+  }
+
+  const { data: users, count } = await query;
 
   return (
     <UsersManager
-      users={data.users}
-      total={data.total}
+      users={(users ?? []) as Profile[]}
+      total={count ?? 0}
       page={page}
       pageSize={PAGE_SIZE}
       currentAdminId={profile.id}

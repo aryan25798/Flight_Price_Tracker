@@ -5,19 +5,22 @@ import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
   Bell,
+  CheckCircle,
   Clock,
   Database,
   Gauge,
   HardDrive,
   Loader2,
   Lock,
+  Mail,
   Save,
+  Send,
   ShieldAlert,
   Sliders,
   Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
-import { adminActionDispatch } from "@/app/admin/actions";
+import { adminActionDispatch, testSmtpConnectionAction } from "@/app/admin/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,6 +42,29 @@ export function SettingsForm({ initial }: { initial: SettingsValues }) {
   const router = useRouter();
   const [values, setValues] = React.useState<SettingsValues>(initial);
   const [saving, setSaving] = React.useState(false);
+  const [testEmail, setTestEmail] = React.useState("");
+  const [sendingTest, setSendingTest] = React.useState(false);
+
+  async function handleSendTestEmail(e: React.FormEvent) {
+    e.preventDefault();
+    if (!testEmail || !testEmail.includes("@")) {
+      toast.error("Please enter a valid email address for testing");
+      return;
+    }
+    setSendingTest(true);
+    try {
+      const res = await testSmtpConnectionAction(testEmail.trim());
+      if (!res.ok) {
+        toast.error(res.message);
+      } else {
+        toast.success(res.message);
+      }
+    } catch {
+      toast.error("Failed to dispatch test email. Check server logs.");
+    } finally {
+      setSendingTest(false);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -409,6 +435,64 @@ export function SettingsForm({ initial }: { initial: SettingsValues }) {
                 Consecutive API failures before an active route is marked stalled.
               </p>
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Section 4: Custom SMTP Email Engine */}
+      <Card className="glass-panel border-[var(--border)]">
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2 text-sky-400">
+            <Mail className="h-4 w-4" />
+            <CardTitle className="text-base">Custom SMTP Email Engine Diagnostics</CardTitle>
+          </div>
+          <CardDescription className="text-xs">
+            AeroDrop 2.0 dispatches automated tracker confirmations and flash price drop alerts using your custom SMTP credentials with zero external subscription costs.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4 pt-1">
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--muted)]/20 p-3.5 space-y-2 text-xs">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-[var(--foreground)]">Supported SMTP Providers:</span>
+              <Badge variant="cyan" dot className="text-[10px]">
+                Active Engine
+              </Badge>
+            </div>
+            <p className="text-[var(--muted-foreground)] leading-relaxed">
+              Compatible with Gmail (App Password), Brevo, Amazon SES, SendGrid, Mailgun, Postmark, and private domain mail servers. Configured via <code className="font-mono text-sky-400">SMTP_HOST</code>, <code className="font-mono text-sky-400">SMTP_PORT</code>, <code className="font-mono text-sky-400">SMTP_USER</code>, <code className="font-mono text-sky-400">SMTP_PASS</code>, and <code className="font-mono text-sky-400">SMTP_FROM</code>.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-[var(--foreground)]">
+              Send Diagnostic Test Email
+            </label>
+            <div className="flex flex-col sm:flex-row gap-2.5">
+              <Input
+                type="email"
+                placeholder="Enter recipient email (e.g. your-email@domain.com)..."
+                value={testEmail}
+                onChange={(e) => setTestEmail(e.target.value)}
+                className="h-10 text-xs sm:text-sm flex-1"
+              />
+              <Button
+                type="button"
+                disabled={sendingTest}
+                onClick={handleSendTestEmail}
+                variant="outline"
+                className="h-10 px-4 text-xs font-semibold border-sky-500/30 text-sky-400 hover:text-sky-300 hover:bg-sky-500/10 shrink-0"
+              >
+                {sendingTest ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                ) : (
+                  <Send className="h-3.5 w-3.5 mr-1.5" />
+                )}
+                Send Test Email
+              </Button>
+            </div>
+            <p className="text-[11px] text-[var(--muted-foreground)]">
+              Verifies end-to-end SMTP handshake, authentication, and inbox delivery.
+            </p>
           </div>
         </CardContent>
       </Card>

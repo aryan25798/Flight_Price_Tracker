@@ -59,6 +59,7 @@ interface TrackerWithProfile {
     id: string;
     is_banned: boolean;
     telegram_chat_id: string | null;
+    email?: string | null;
   };
 }
 
@@ -316,7 +317,7 @@ Deno.serve(async (req: Request) => {
               .select(`
                 id, user_id, origin, destination, departure_date, return_date,
                 currency, target_price, last_notified_price, last_notified_at,
-                profiles!inner(id, is_banned, telegram_chat_id)
+                profiles!inner(id, is_banned, telegram_chat_id, email)
               `)
               .eq("route_id", route.id)
               .eq("is_active", true)
@@ -340,7 +341,7 @@ Deno.serve(async (req: Request) => {
             // SCALE-01: Filter eligible trackers and determine notification type (price_drop vs status_update)
             const eligibleTrackers = activeTrackers
               .map((tracker) => {
-                if (!tracker.profiles?.telegram_chat_id) return null;
+                if (!tracker.profiles?.telegram_chat_id && !tracker.profiles?.email) return null;
                 const targetPrice = Number(tracker.target_price);
                 const lastNotifiedPrice =
                   tracker.last_notified_price !== null
@@ -376,7 +377,8 @@ Deno.serve(async (req: Request) => {
 
               const chunkResults = await Promise.allSettled(
                 trackerChunk.map(async ({ tracker, decision }) => {
-                  const chatId = tracker.profiles.telegram_chat_id!;
+                  const chatId = tracker.profiles.telegram_chat_id;
+                  const email = tracker.profiles.email;
                   const targetPrice = Number(tracker.target_price);
                   const lastNotifiedPrice =
                     tracker.last_notified_price !== null
@@ -399,6 +401,7 @@ Deno.serve(async (req: Request) => {
                       currency: offer.currency,
                       delivery_status: "pending",
                       idempotency_key: idempotencyKey,
+                      is_read: false,
                     });
 
                   // Skip if another worker already claimed this idempotency_key
@@ -406,41 +409,92 @@ Deno.serve(async (req: Request) => {
                     return { sent: false };
                   }
 
-                  const messageHtml =
-                    decision.type === "price_drop"
-                      ? formatPriceDropMessage({
-                          origin: tracker.origin,
-                          destination: tracker.destination,
-                          departureDate: tracker.departure_date,
-                          returnDate: tracker.return_date,
-                          airline: offer.airline,
-                          previousPrice: lastNotifiedPrice,
-                          currentPrice: offer.price,
-                          targetPrice,
-                          currency: offer.currency,
-                          bookingUrl: offer.bookingUrl,
-                        })
-                      : formatRoutineUpdateMessage({
-                          origin: tracker.origin,
-                          destination: tracker.destination,
-                          departureDate: tracker.departure_date,
-                          returnDate: tracker.return_date,
-                          airline: offer.airline,
-                          currentPrice: offer.price,
-                          targetPrice,
-                          currency: offer.currency,
-                          bookingUrl: offer.bookingUrl,
-                        });
+                  let tgSent = false;
+                  let tgMessageId: number | null = null;
+                  let emailSent = false;
 
-                  const tgResult = await sendTelegramMessage(chatId, messageHtml);
+                  if (chatId) {
+                    const messageHtml =
+                      decision.type === "price_drop"
+                        ? formatPriceDropMessage({
+                            origin: tracker.origin,
+                            destination: tracker.destination,
+                            departureDate: tracker.departure_date,
+                            returnDate: tracker.return_date,
+                            airline: offer.airline,
+                            previousPrice: lastNotifiedPrice,
+                            currentPrice: offer.price,
+                            targetPrice,
+                            currency: offer.currency,
+                            bookingUrl: offer.bookingUrl,
+                          })
+                        : formatRoutineUpdateMessage({
+                            origin: tracker.origin,
+                            destination: tracker.destination,
+                            departureDate: tracker.departure_date,
+                            returnDate: tracker.return_date,
+                            airline: offer.airline,
+                            currentPrice: offer.price,
+                            targetPrice,
+                            currency: offer.currency,
+                            bookingUrl: offer.bookingUrl,
+                          });
 
-                  if (tgResult.ok) {
+                    const tgResult = await sendTelegramMessage(chatId, messageHtml);
+                    tgSent = tgResult.ok;
+                    tgMessageId = tgResult.messageId ?? null;
+                  }
+
+                  // Dispatch Custom SMTP Email for price drops if email is configured
+                  if (email && decision.type === "price_drop") {
+                    try {
+                      const appUrl =
+                        Deno.env.get("APP_URL") ||
+                        Deno.env.get("NEXT_PUBLIC_APP_URL") ||
+                        "https://flight-price-tracker-nu.vercel.app";
+                      const secret =
+                        Deno.env.get("CRON_SECRET") ||
+                        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ||
+                        "";
+                      const emailRes = await fetch(`${appUrl}/api/notify-email`, {
+                        method: "POST",
+                        headers: {
+                          "Content-Type": "application/json",
+                          "x-internal-secret": secret,
+                        },
+                        body: JSON.stringify({
+                          to: email,
+                          type: "price_drop",
+                          data: {
+                            origin: tracker.origin,
+                            destination: tracker.destination,
+                            departureDate: tracker.departure_date,
+                            returnDate: tracker.return_date,
+                            airline: offer.airline,
+                            currentPrice: offer.price,
+                            targetPrice,
+                            currency: offer.currency,
+                            bookingUrl: offer.bookingUrl,
+                          },
+                        }),
+                      });
+                      if (emailRes.ok) {
+                        emailSent = true;
+                      }
+                    } catch (e) {
+                      console.error("Email notification dispatch error:", e);
+                    }
+                  }
+
+                  const isDelivered = tgSent || emailSent || (!chatId && Boolean(email));
+
+                  if (isDelivered) {
                     const sentAt = new Date().toISOString();
                     await supabaseAdmin
                       .from("notification_logs")
                       .update({
                         delivery_status: "sent",
-                        telegram_message_id: tgResult.messageId ?? null,
+                        telegram_message_id: tgMessageId,
                         sent_at: sentAt,
                       })
                       .eq("idempotency_key", idempotencyKey);
@@ -459,7 +513,7 @@ Deno.serve(async (req: Request) => {
                       .from("notification_logs")
                       .update({
                         delivery_status: "failed",
-                        error_message: tgResult.error ?? "Unknown Telegram error",
+                        error_message: "Failed to dispatch Telegram or Email alert",
                       })
                       .eq("idempotency_key", idempotencyKey);
 

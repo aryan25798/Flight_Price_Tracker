@@ -1,4 +1,5 @@
 export type UserRole = "user" | "super_admin";
+export type UserTier = "free" | "pro" | "enterprise";
 export type TripType = "one_way" | "round_trip";
 export type CabinClass = "economy" | "premium_economy" | "business" | "first";
 export type SupportedCurrency = "INR" | "USD" | "EUR" | "GBP" | "AED" | "SGD";
@@ -8,10 +9,21 @@ export interface Profile {
   id: string;
   email: string;
   role: UserRole;
+  tier: UserTier;
+  custom_tracker_limit: number | null; // null = tier default, -1 = unlimited, >=0 = exact custom limit
+  tier_notes?: string | null;
   is_banned: boolean;
   telegram_chat_id: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface UserQuota {
+  tier: UserTier;
+  effective_limit: number;
+  current_count: number;
+  is_unlimited: boolean;
+  remaining: number;
 }
 
 export interface MonitoredRoute {

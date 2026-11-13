@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient, requireSuperAdminProfile } from "@/lib/supabase/server";
 import { callAdminEdgeFunction } from "@/services/admin/admin-api";
+import { sendEmail } from "@/lib/email/smtp";
 
 export interface AdminStats {
   total_users: number;
@@ -39,6 +40,93 @@ export async function adminActionDispatch(
     }
   }
   return res;
+}
+
+export async function updateUserTierAction(params: {
+  userId: string;
+  tier: "free" | "pro" | "enterprise";
+  customTrackerLimit: number | null;
+  tierNotes?: string | null;
+}): Promise<{ ok: boolean; error?: string }> {
+  const { user } = await requireSuperAdminProfile();
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({
+      tier: params.tier,
+      custom_tracker_limit: params.customTrackerLimit,
+      tier_notes: params.tierNotes ?? null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", params.userId);
+
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+
+  // Record immutable admin audit log
+  await supabase.from("admin_audit_logs").insert({
+    admin_id: user.id,
+    action: "update_user_tier",
+    target_id: params.userId,
+    metadata: {
+      new_tier: params.tier,
+      custom_tracker_limit: params.customTrackerLimit,
+      tier_notes: params.tierNotes,
+    },
+  });
+
+  revalidatePath("/admin/users");
+  revalidatePath("/admin");
+  return { ok: true };
+}
+
+export async function testSmtpConnectionAction(
+  targetEmail: string,
+): Promise<{ ok: boolean; message: string }> {
+  await requireSuperAdminProfile();
+
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    return {
+      ok: false,
+      message: "SMTP is not configured. Please add SMTP_HOST, SMTP_USER, and SMTP_PASS to .env.local",
+    };
+  }
+
+  const result = await sendEmail({
+    to: targetEmail,
+    subject: "✈️ AeroDrop 2.0 Test Email Dispatch",
+    html: `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #060913; color: #f8fafc; padding: 32px 20px; border-radius: 16px; border: 1px solid rgba(56, 189, 248, 0.3);">
+        <h2 style="color: #38bdf8; margin-top: 0;">✈️ AeroDrop 2.0 SMTP Mail Engine Verified</h2>
+        <p style="color: #cbd5e1; font-size: 14px; line-height: 1.6;">
+          This test message confirms that your custom SMTP server (<strong>${process.env.SMTP_HOST}</strong>) is functioning properly and sending real-time price alerts to AeroDrop members.
+        </p>
+        <div style="margin-top: 20px; padding: 12px 16px; background: rgba(56, 189, 248, 0.1); border-radius: 8px; border: 1px solid rgba(56, 189, 248, 0.2); font-family: monospace; font-size: 12px; color: #38bdf8;">
+          Server: ${process.env.SMTP_HOST}:${process.env.SMTP_PORT || 587}<br>
+          From: ${process.env.SMTP_FROM || process.env.SMTP_USER}<br>
+          Timestamp: ${new Date().toISOString()}
+        </div>
+        <p style="color: #64748b; font-size: 11px; margin-top: 24px; margin-bottom: 0;">
+          © 2026 AeroDrop 2.0 · Autonomous Flight Price Drop Tracker
+        </p>
+      </div>
+    `,
+    text: "AeroDrop 2.0 custom SMTP test email successful.",
+  });
+
+  if (!result) {
+    return {
+      ok: false,
+      message: "SMTP delivery failed. Check your host, port, credentials, and app password.",
+    };
+  }
+
+  return {
+    ok: true,
+    message: `Test email successfully dispatched to ${targetEmail} via custom SMTP!`,
+  };
 }
 
 export async function fetchAdminOverviewData(): Promise<{

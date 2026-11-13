@@ -36,13 +36,16 @@ import {
 import { createTrackerAction } from "@/app/dashboard/actions";
 import { checkCurrentPriceAction, type FlightPriceQuote } from "@/app/dashboard/price-action";
 import { cn } from "@/lib/utils";
+import type { UserQuota } from "@/types/database";
 
 export function FlightSearchForm({
   initialOrigin,
   initialDestination,
+  quotaInfo,
 }: {
   initialOrigin?: string;
   initialDestination?: string;
+  quotaInfo?: UserQuota;
 } = {}) {
   const [submitting, setSubmitting] = React.useState(false);
   const [checkingPrice, setCheckingPrice] = React.useState(false);
@@ -192,8 +195,26 @@ export function FlightSearchForm({
             </CardDescription>
           </div>
 
-          {/* Trip Type Segmented Controller */}
-          <div className="inline-flex self-start sm:self-auto rounded-xl border border-[var(--border)] glass-surface-2 p-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            {quotaInfo && (
+              <div className="flex items-center gap-2">
+                {quotaInfo.is_unlimited ? (
+                  <Badge variant="cyan" dot className="text-xs font-semibold capitalize border-cyan-500/30">
+                    {quotaInfo.tier} · Unlimited Trackers (∞)
+                  </Badge>
+                ) : (
+                  <Badge
+                    variant={quotaInfo.remaining === 0 ? "destructive" : "secondary"}
+                    className="text-xs font-mono"
+                  >
+                    {quotaInfo.current_count} / {quotaInfo.effective_limit} Trackers ({quotaInfo.remaining} left)
+                  </Badge>
+                )}
+              </div>
+            )}
+
+            {/* Trip Type Segmented Controller */}
+            <div className="inline-flex self-start sm:self-auto rounded-xl border border-[var(--border)] glass-surface-2 p-1">
             <button
               type="button"
               onClick={() => setValue("tripType", "one_way", { shouldValidate: true })}
@@ -219,6 +240,7 @@ export function FlightSearchForm({
               Round-trip
             </button>
           </div>
+        </div>
         </div>
       </CardHeader>
 
@@ -550,6 +572,16 @@ export function FlightSearchForm({
             </div>
           )}
 
+          {/* Quota Limit Warning Banner */}
+          {quotaInfo && !quotaInfo.is_unlimited && quotaInfo.remaining === 0 && (
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5 text-xs text-amber-200 flex items-start gap-2.5">
+              <Info className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+              <div>
+                <strong className="text-amber-300">Active Tracker Quota Reached:</strong> You have reached your limit of {quotaInfo.effective_limit} active trackers on the {quotaInfo.tier.toUpperCase()} tier. To track additional routes, pause one of your existing trackers or contact an administrator for a Pro or Enterprise plan upgrade.
+              </div>
+            </div>
+          )}
+
           {/* Target Price & Create Submission */}
           <div className="border-t border-[var(--border)] pt-5 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
             <div className="w-full sm:max-w-xs space-y-1.5">
@@ -577,7 +609,7 @@ export function FlightSearchForm({
 
             <Button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || (Boolean(quotaInfo) && !quotaInfo?.is_unlimited && quotaInfo?.remaining === 0)}
               className="gap-2 min-h-[46px] px-7 text-sm font-bold shadow-lg cursor-pointer self-stretch sm:self-auto"
             >
               {submitting ? (
@@ -585,7 +617,11 @@ export function FlightSearchForm({
               ) : (
                 <Plus className="h-4 w-4" />
               )}
-              <span>Activate Route Tracker</span>
+              <span>
+                {Boolean(quotaInfo) && !quotaInfo?.is_unlimited && quotaInfo?.remaining === 0
+                  ? `Quota Reached (${quotaInfo?.effective_limit}/${quotaInfo?.effective_limit})`
+                  : "Activate Route Tracker"}
+              </span>
             </Button>
           </div>
         </form>

@@ -64,7 +64,7 @@ export const getAuthenticatedProfile = cache(
 
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
-      .select("id, email, role, is_banned, telegram_chat_id, created_at, updated_at")
+      .select("id, email, role, tier, custom_tracker_limit, tier_notes, is_banned, telegram_chat_id, created_at, updated_at")
       .eq("id", user.id)
       .single();
 
