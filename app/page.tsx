@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import {
   ArrowRight,
   ArrowRightLeft,
@@ -70,44 +71,64 @@ export default async function HomePage() {
       </header>
 
       <main className="flex-1">
-        {/* Hero Section */}
-        <section className="relative mx-auto max-w-7xl px-4 py-16 sm:py-24 lg:py-32 text-center">
-          <div className="relative z-10 max-w-3xl mx-auto space-y-6">
-            {/* Pill Header Badge */}
-            <div className="inline-flex items-center gap-2 rounded-full border border-sky-500/30 bg-sky-500/10 px-4 py-1.5 text-xs font-semibold text-sky-300 shadow-2xs backdrop-blur-md">
-              <Radio className="h-3.5 w-3.5 text-sky-400 animate-pulse" />
-              <span>Automated 4-Hour Price Radar &amp; Instant Telegram Alerts</span>
-            </div>
-
-            <h1 className="text-3xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl text-[var(--foreground)] leading-[1.12]">
-              Never overpay for{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-blue-400 to-cyan-300">
-                airline tickets
-              </span>{" "}
-              again.
-            </h1>
-
-            <p className="mx-auto max-w-2xl text-sm sm:text-base lg:text-lg text-[var(--muted-foreground)] leading-relaxed">
-              Configure your alert threshold for any global route. AeroDrop scans live airline fares around the clock, plots 30-day historical trends, and pings you on Telegram the moment fares drop.
-            </p>
-
-            <div className="flex flex-wrap items-center justify-center gap-3.5 pt-2">
-              <Link href={user ? "/dashboard" : "/signup"}>
-                <Button size="lg" className="min-h-[48px] px-8 gap-2 text-base font-bold shadow-lg">
-                  <span>{user ? "Go to Flight Console" : "Start Tracking Routes Free"}</span>
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
-              <Link href="/login">
-                <Button size="lg" variant="outline" className="min-h-[48px] px-6 text-base font-semibold">
-                  Existing User Sign In
-                </Button>
-              </Link>
-            </div>
+        {/* Hero Section with Aviation Photography & Atmospheric Glow */}
+        <section className="relative overflow-hidden pt-12 pb-20 sm:pt-20 sm:pb-28 lg:pt-28 lg:pb-36 text-center">
+          {/* Authentic Aviation Photography Background Layer */}
+          <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden select-none">
+            <Image
+              src="/images/airplane-hero-sky.webp"
+              alt="Commercial jetliner cruising smoothly above sunset cloudscapes"
+              fill
+              priority
+              sizes="100vw"
+              quality={85}
+              className="object-cover object-[center_28%] opacity-30 dark:opacity-25"
+            />
+            {/* Atmospheric gradient overlay protecting text readability */}
+            <div className="absolute inset-0 bg-gradient-to-b from-[#080c17]/60 via-[#080c17]/85 to-[#080c17]" />
+            {/* Radial atmospheric soft lights */}
+            <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[680px] h-[360px] bg-sky-500/12 rounded-full blur-[140px]" />
+            <div className="absolute top-1/3 left-1/4 w-[420px] h-[280px] bg-blue-600/10 rounded-full blur-[120px]" />
           </div>
 
-          {/* Interactive Live Route Preview Simulator */}
-          <div className="relative z-10 mx-auto mt-12 sm:mt-16 max-w-4xl">
+          <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="max-w-3xl mx-auto space-y-6">
+              {/* Refined Glass Badge */}
+              <div className="inline-flex items-center gap-2.5 rounded-full border border-sky-500/30 bg-sky-500/10 px-4 py-1.5 text-xs font-semibold text-sky-300 shadow-[0_0_20px_rgba(56,189,248,0.18)] backdrop-blur-md">
+                <Radio className="h-3.5 w-3.5 text-sky-400 animate-pulse" />
+                <span>Autonomous 4-Hour Price Radar &amp; Instant Telegram Alerts</span>
+              </div>
+
+              {/* Headline Typography */}
+              <h1 className="text-3xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl text-[var(--foreground)] leading-[1.12]">
+                Never overpay for{" "}
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-blue-400 to-cyan-300">
+                  airline tickets
+                </span>{" "}
+                again.
+              </h1>
+
+              <p className="mx-auto max-w-2xl text-sm sm:text-base lg:text-lg text-[var(--muted-foreground)] leading-relaxed">
+                Configure your alert threshold for any global route. AeroDrop scans live airline fares around the clock, plots 30-day historical trends, and pings you on Telegram the moment fares drop.
+              </p>
+
+              <div className="flex flex-wrap items-center justify-center gap-3.5 pt-2">
+                <Link href={user ? "/dashboard" : "/signup"}>
+                  <Button size="lg" className="min-h-[48px] px-8 gap-2 text-base font-bold shadow-lg">
+                    <span>{user ? "Go to Flight Console" : "Start Tracking Routes Free"}</span>
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </Link>
+                <Link href="/login">
+                  <Button size="lg" variant="outline" className="min-h-[48px] px-6 text-base font-semibold">
+                    Existing User Sign In
+                  </Button>
+                </Link>
+              </div>
+            </div>
+
+            {/* Interactive Live Route Preview Simulator */}
+            <div className="relative z-10 mx-auto mt-12 sm:mt-16 max-w-4xl">
             <div className="glass-surface-1 rounded-2xl border border-[var(--border)] p-4 sm:p-7 shadow-2xl text-left">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] pb-4">
                 <div className="flex items-center gap-2.5">
@@ -211,7 +232,8 @@ export default async function HomePage() {
               </p>
             </div>
           </div>
-        </section>
+        </div>
+      </section>
       </main>
 
       {/* Footer */}
