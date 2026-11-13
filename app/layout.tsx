@@ -22,6 +22,13 @@ export const metadata: Metadata = {
   title: "AeroDrop — Automated Flight Price Drop Tracker",
   description:
     "Monitor flight fares automatically and receive instant Telegram alerts when prices drop below your target.",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "32x32" },
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
+    shortcut: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({
