@@ -260,4 +260,95 @@ describe("Phase 2 Functional Testing: User Dashboard & Tracker Management", () =
       expect(store.get(id)).toBeUndefined();
     });
   });
+
+  describe("In-App Notification Hub & Pagination Engine", () => {
+    interface MockNotification {
+      id: string;
+      userId: string;
+      type: "price_drop" | "status_update" | "system";
+      isRead: boolean;
+    }
+
+    class MockNotificationStore {
+      private items: MockNotification[] = [];
+
+      add(userId: string, type: "price_drop" | "status_update" | "system") {
+        const id = `notif-${Math.random().toString(36).substring(2, 9)}`;
+        this.items.unshift({ id, userId, type, isRead: false });
+        return id;
+      }
+
+      markRead(userId: string, id: string, isRead = true) {
+        const item = this.items.find((n) => n.id === id && n.userId === userId);
+        if (item) {
+          item.isRead = isRead;
+          return true;
+        }
+        return false;
+      }
+
+      markAllRead(userId: string) {
+        let count = 0;
+        this.items.forEach((n) => {
+          if (n.userId === userId && !n.isRead) {
+            n.isRead = true;
+            count++;
+          }
+        });
+        return count;
+      }
+
+      paginate(userId: string, page = 1, pageSize = 10, filter: "all" | "unread" | "price_drop" = "all") {
+        let filtered = this.items.filter((n) => n.userId === userId);
+        if (filter === "unread") filtered = filtered.filter((n) => !n.isRead);
+        if (filter === "price_drop") filtered = filtered.filter((n) => n.type === "price_drop");
+
+        const total = filtered.length;
+        const totalPages = Math.max(1, Math.ceil(total / pageSize));
+        const from = (page - 1) * pageSize;
+        const to = from + pageSize;
+        const items = filtered.slice(from, to);
+
+        return { items, total, totalPages, page };
+      }
+    }
+
+    it("correctly tracks unread counts and marks notifications as read", () => {
+      const store = new MockNotificationStore();
+      const id1 = store.add("u1", "price_drop");
+      const id2 = store.add("u1", "status_update");
+      const id3 = store.add("u1", "system");
+
+      const pageInitial = store.paginate("u1", 1, 10, "unread");
+      expect(pageInitial.total).toBe(3);
+
+      // Mark single notification read
+      store.markRead("u1", id1, true);
+      const pageAfterOne = store.paginate("u1", 1, 10, "unread");
+      expect(pageAfterOne.total).toBe(2);
+
+      // Mark all read
+      store.markAllRead("u1");
+      const pageAfterAll = store.paginate("u1", 1, 10, "unread");
+      expect(pageAfterAll.total).toBe(0);
+    });
+
+    it("paginates notifications cleanly into page slices", () => {
+      const store = new MockNotificationStore();
+      for (let i = 0; i < 25; i++) {
+        store.add("u1", i % 2 === 0 ? "price_drop" : "status_update");
+      }
+
+      const p1 = store.paginate("u1", 1, 10, "all");
+      expect(p1.items.length).toBe(10);
+      expect(p1.totalPages).toBe(3);
+      expect(p1.total).toBe(25);
+
+      const p3 = store.paginate("u1", 3, 10, "all");
+      expect(p3.items.length).toBe(5);
+
+      const priceDropsOnly = store.paginate("u1", 1, 10, "price_drop");
+      expect(priceDropsOnly.total).toBe(13);
+    });
+  });
 });

@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { signOutAction } from "@/app/dashboard/actions";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -31,9 +32,14 @@ import type { Profile } from "@/types/database";
 interface AppShellProps {
   profile: Profile;
   children: React.ReactNode;
+  unreadNotificationCount?: number;
 }
 
-export function AppShell({ profile, children }: AppShellProps) {
+export function AppShell({
+  profile,
+  children,
+  unreadNotificationCount = 0,
+}: AppShellProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = React.useState(false);
 
@@ -57,6 +63,12 @@ export function AppShell({ profile, children }: AppShellProps) {
   const navItems = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/dashboard/trackers", label: "Track Flights", icon: Plane },
+    {
+      href: "/dashboard/notifications",
+      label: "Notifications",
+      icon: Bell,
+      badge: unreadNotificationCount > 0 ? unreadNotificationCount : undefined,
+    },
     { href: "/dashboard/settings", label: "Telegram Alerts", icon: Radio },
   ];
 
@@ -67,6 +79,7 @@ export function AppShell({ profile, children }: AppShellProps) {
   const getPageTitle = () => {
     if (pathname === "/dashboard") return "Flight Command Center";
     if (pathname.startsWith("/dashboard/trackers")) return "Active Flight Trackers";
+    if (pathname.startsWith("/dashboard/notifications")) return "Notification Center";
     if (pathname.startsWith("/dashboard/settings")) return "Alerts & Configuration";
     if (pathname.startsWith("/admin")) return "Superuser Console";
     return "AeroDrop";
@@ -126,7 +139,12 @@ export function AppShell({ profile, children }: AppShellProps) {
                     )}
                   />
                   <span>{item.label}</span>
-                  {active && (
+                  {item.badge && (
+                    <span className="ml-auto rounded-full bg-red-500/20 border border-red-500/40 px-1.5 py-0.2 text-[10px] font-bold text-red-300">
+                      {item.badge}
+                    </span>
+                  )}
+                  {active && !item.badge && (
                     <span className="absolute right-3 h-1.5 w-1.5 rounded-full bg-sky-400 shadow-[0_0_8px_rgba(56,189,248,0.9)]" />
                   )}
                 </Link>
@@ -231,11 +249,8 @@ export function AppShell({ profile, children }: AppShellProps) {
               <span>Cron: Active (4h)</span>
             </div>
 
-            <Link href="/dashboard/settings" title="Alert Notifications">
-              <Button variant="ghost" size="iconSm" className="rounded-xl text-[var(--muted-foreground)] hover:text-white">
-                <Bell className="h-4 w-4" />
-              </Button>
-            </Link>
+            {/* In-App Notification Bell & Interactive Dropdown */}
+            <NotificationBell initialUnreadCount={unreadNotificationCount} />
 
             <ThemeToggle />
           </div>

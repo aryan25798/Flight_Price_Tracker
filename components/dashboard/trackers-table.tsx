@@ -511,7 +511,7 @@ export function TrackersTable({
             </div>
 
             {/* Sites Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-80 overflow-y-auto pr-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               {comparisonSites.map((site) => (
                 <div
                   key={site.id}
@@ -542,7 +542,7 @@ export function TrackersTable({
               ))}
             </div>
 
-            <div className="flex justify-end pt-2 border-t border-[var(--border)]">
+            <div className="sticky bottom-0 bg-[var(--glass-surface-1)]/90 backdrop-blur-md flex justify-end pt-3 pb-1 border-t border-[var(--border)]">
               <Button variant="outline" size="sm" onClick={() => setCompareTracker(null)}>
                 Close
               </Button>

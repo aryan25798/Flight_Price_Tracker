@@ -77,3 +77,39 @@ export interface Airport {
   city: string;
   country: string;
 }
+
+export type NotificationType = "price_drop" | "status_update" | "test" | "system";
+export type NotificationDeliveryStatus = "pending" | "sent" | "failed" | "skipped";
+
+export interface NotificationLog {
+  id: string;
+  user_id: string;
+  tracker_id: string | null;
+  route_id: string | null;
+  notification_type: NotificationType;
+  previous_price: number | null;
+  current_price: number | null;
+  currency: string | null;
+  delivery_status: NotificationDeliveryStatus;
+  sent_at: string | null;
+  error_message: string | null;
+  idempotency_key: string | null;
+  telegram_message_id: number | null;
+  is_read: boolean;
+  read_at: string | null;
+  created_at: string;
+  tracked_flights?: {
+    origin: string;
+    destination: string;
+    departure_date: string;
+    target_price: number;
+    currency: string;
+  } | null;
+  monitored_routes?: {
+    origin: string;
+    destination: string;
+    last_airline: string | null;
+    last_booking_url: string | null;
+  } | null;
+}
+
