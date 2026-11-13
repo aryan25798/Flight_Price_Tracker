@@ -1,5 +1,5 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 import type { Profile } from "@/types/database";
@@ -43,7 +43,23 @@ export const getAuthenticatedProfile = cache(
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      redirect("/login");
+      let loginRedirect = "/login";
+      try {
+        const headerList = await headers();
+        const pathname = headerList.get("x-pathname");
+        if (
+          pathname &&
+          pathname !== "/dashboard" &&
+          pathname !== "/login" &&
+          pathname.startsWith("/") &&
+          !pathname.startsWith("//")
+        ) {
+          loginRedirect = `/login?next=${encodeURIComponent(pathname)}`;
+        }
+      } catch {
+        // Fallback to default /login
+      }
+      redirect(loginRedirect);
     }
 
     const { data: profile, error: profileError } = await supabase

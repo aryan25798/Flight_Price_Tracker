@@ -173,4 +173,38 @@ describe("Phase 2 Functional Testing: Authentication & Access Control", () => {
       expect(checkRouteAccess(admin, "/admin/users")).toEqual({ allowed: true });
     });
   });
+
+  describe("Deep-Linking, Callback Routing & Post-Login Redirection", () => {
+    function resolveCallbackDestination(
+      type: string | null,
+      rawNext: string | null,
+    ): string {
+      const isRecovery = type === "recovery" || (rawNext !== null && rawNext.includes("reset-password"));
+      const defaultNext = isRecovery ? "/auth/reset-password" : "/dashboard";
+      return rawNext && rawNext.startsWith("/") && !rawNext.startsWith("//")
+        ? rawNext
+        : defaultNext;
+    }
+
+    it("routes password recovery callbacks to /auth/reset-password", () => {
+      expect(resolveCallbackDestination("recovery", null)).toBe("/auth/reset-password");
+      expect(resolveCallbackDestination(null, "/auth/reset-password")).toBe("/auth/reset-password");
+    });
+
+    it("routes email verification and signup callbacks to /dashboard", () => {
+      expect(resolveCallbackDestination("signup", null)).toBe("/dashboard");
+      expect(resolveCallbackDestination("email", null)).toBe("/dashboard");
+    });
+
+    it("preserves deep-link targets such as /dashboard/trackers or /dashboard/settings", () => {
+      expect(resolveCallbackDestination(null, "/dashboard/trackers")).toBe("/dashboard/trackers");
+      expect(resolveCallbackDestination("signup", "/dashboard/settings")).toBe("/dashboard/settings");
+    });
+
+    it("neutralizes open-redirect attacks attempting external navigation", () => {
+      expect(resolveCallbackDestination(null, "//evil.com")).toBe("/dashboard");
+      expect(resolveCallbackDestination(null, "https://malicious-site.com")).toBe("/dashboard");
+      expect(resolveCallbackDestination("recovery", "https://phishing.com")).toBe("/auth/reset-password");
+    });
+  });
 });

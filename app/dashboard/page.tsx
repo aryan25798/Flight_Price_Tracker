@@ -29,7 +29,7 @@ const PAGE_SIZE = 10;
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; origin?: string; destination?: string }>;
 }) {
   const { user, profile } = await getAuthenticatedProfile();
   const params = await searchParams;
@@ -224,7 +224,7 @@ export default async function DashboardPage({
 
       {/* Flight Search & Route Configuration Form ("Track Your Next Flight") */}
       <section aria-label="Add new route to monitor">
-        <FlightSearchForm />
+        <FlightSearchForm initialOrigin={params.origin} initialDestination={params.destination} />
       </section>
 
       {/* Active & Historical Trackers Section ("Your Active Flight Trackers") */}

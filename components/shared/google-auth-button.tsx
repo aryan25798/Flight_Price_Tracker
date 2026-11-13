@@ -6,14 +6,15 @@ import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 
-export function GoogleAuthButton({ mode }: { mode: "login" | "signup" }) {
+export function GoogleAuthButton({ mode, next }: { mode: "login" | "signup"; next?: string }) {
   const [loading, setLoading] = React.useState(false);
 
   async function handleGoogleSignIn() {
     setLoading(true);
     try {
       const supabase = createClient();
-      const redirectUrl = `${window.location.origin}/auth/callback`;
+      const safeNext = next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
+      const redirectUrl = `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeNext)}`;
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {

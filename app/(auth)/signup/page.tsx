@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowRight, CheckCircle2, Eye, EyeOff, Loader2, Lock, Mail, UserPlus } from "lucide-react";
@@ -13,15 +13,23 @@ import { Button } from "@/components/ui/button";
 import { GoogleAuthButton } from "@/components/shared/google-auth-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { getAppUrl } from "@/lib/utils";
 import { z } from "zod";
 
 type SignupFormValues = z.infer<typeof SignupSchema>;
 
-export default function SignupPage() {
+function SignupForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = React.useState(false);
   const [showPassword, setShowPassword] = React.useState(false);
   const [signedUpEmail, setSignedUpEmail] = React.useState<string | null>(null);
+
+  const rawNext = searchParams.get("next") || searchParams.get("redirectTo");
+  const safeNext =
+    rawNext && rawNext.startsWith("/") && !rawNext.startsWith("//")
+      ? rawNext
+      : "/dashboard";
 
   const {
     register,
@@ -35,11 +43,14 @@ export default function SignupPage() {
     setLoading(true);
     try {
       const supabase = createClient();
+      const appUrl = getAppUrl();
+      const redirectUrl = `${appUrl}/auth/callback?next=${encodeURIComponent(safeNext)}`;
+
       const { data, error } = await supabase.auth.signUp({
         email: values.email,
         password: values.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: redirectUrl,
         },
       });
 
@@ -49,8 +60,8 @@ export default function SignupPage() {
       }
 
       if (data.session) {
-        toast.success("Account created! Redirecting to dashboard...");
-        router.push("/dashboard");
+        toast.success("Account created! Redirecting...");
+        router.push(safeNext);
         router.refresh();
       } else {
         setSignedUpEmail(values.email);
@@ -73,14 +84,16 @@ export default function SignupPage() {
           <CardTitle className="text-lg sm:text-xl font-bold tracking-tight">Check your inbox</CardTitle>
           <CardDescription className="text-xs">
             We sent a verification link to <strong className="text-[var(--foreground)]">{signedUpEmail}</strong>.
-            Click the link in the email to activate your account.
           </CardDescription>
         </CardHeader>
-        <CardContent className="p-4 pt-0 sm:p-5 sm:pt-0 space-y-2.5">
-          <div className="rounded-xl glass-surface-2 border border-[var(--border)] p-3 text-[11px] text-[var(--muted-foreground)] leading-relaxed">
-            Can&apos;t find the email? Check your spam folder or verify your address.
-          </div>
-          <Link href="/login" className="block w-full">
+        <CardContent className="p-4 pt-0 sm:p-5 sm:pt-0 space-y-3">
+          <p className="text-[11px] text-[var(--muted-foreground)] leading-relaxed">
+            Click the link in the email to activate your account. Once verified, you will be automatically redirected to your destination.
+          </p>
+          <Link
+            href={safeNext !== "/dashboard" ? `/login?next=${encodeURIComponent(safeNext)}` : "/login"}
+            className="block w-full pt-1"
+          >
             <Button variant="outline" className="w-full font-semibold text-xs min-h-[38px]">
               Back to Sign In
             </Button>
@@ -97,10 +110,10 @@ export default function SignupPage() {
           <UserPlus className="h-3.5 w-3.5" />
         </div>
         <CardTitle className="text-lg sm:text-xl font-bold tracking-tight">
-          Create an Account
+          Create Account
         </CardTitle>
         <CardDescription className="text-[11px] sm:text-xs">
-          Start tracking flight routes with automated 4-hour checks.
+          Start tracking real-time flight price drops and get Telegram alerts.
         </CardDescription>
       </CardHeader>
 
@@ -136,7 +149,7 @@ export default function SignupPage() {
                 id="password"
                 type={showPassword ? "text" : "password"}
                 autoComplete="new-password"
-                placeholder="At least 6 characters"
+                placeholder="At least 8 characters"
                 className="pl-9 pr-9 text-xs sm:text-sm font-mono tracking-widest min-h-[38px] sm:min-h-[40px] py-1.5"
                 {...register("password")}
               />
@@ -177,15 +190,26 @@ export default function SignupPage() {
           </div>
         </div>
 
-        <GoogleAuthButton mode="signup" />
+        <GoogleAuthButton mode="signup" next={safeNext} />
 
         <p className="mt-2 text-center text-xs text-[var(--muted-foreground)]">
           Already have an account?{" "}
-          <Link href="/login" className="font-bold text-sky-400 hover:text-sky-300 underline-offset-4 hover:underline">
+          <Link
+            href={safeNext !== "/dashboard" ? `/login?next=${encodeURIComponent(safeNext)}` : "/login"}
+            className="font-bold text-sky-400 hover:text-sky-300 underline-offset-4 hover:underline"
+          >
             Sign in
           </Link>
         </p>
       </CardContent>
     </Card>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <React.Suspense fallback={<div className="h-72 animate-pulse rounded-2xl glass-surface-2" />}>
+      <SignupForm />
+    </React.Suspense>
   );
 }

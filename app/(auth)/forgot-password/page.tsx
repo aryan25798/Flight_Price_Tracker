@@ -11,6 +11,7 @@ import { ForgotPasswordSchema } from "@/lib/validations/tracker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { getAppUrl } from "@/lib/utils";
 import { z } from "zod";
 
 type ForgotValues = z.infer<typeof ForgotPasswordSchema>;
@@ -31,8 +32,9 @@ export default function ForgotPasswordPage() {
     setLoading(true);
     try {
       const supabase = createClient();
+      const appUrl = getAppUrl();
       const { error } = await supabase.auth.resetPasswordForEmail(values.email, {
-        redirectTo: `${window.location.origin}/auth/callback?next=/auth/reset-password`,
+        redirectTo: `${appUrl}/auth/callback?next=/auth/reset-password`,
       });
 
       if (error) {

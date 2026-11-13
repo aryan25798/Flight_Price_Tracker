@@ -23,6 +23,12 @@ function LoginForm() {
   const [loading, setLoading] = React.useState(false);
   const [showPassword, setShowPassword] = React.useState(false);
 
+  const rawNext = searchParams.get("next") || searchParams.get("redirectTo");
+  const safeNext =
+    rawNext && rawNext.startsWith("/") && !rawNext.startsWith("//")
+      ? rawNext
+      : "/dashboard";
+
   const urlError = searchParams.get("error");
   React.useEffect(() => {
     if (urlError === "account_suspended") {
@@ -31,6 +37,32 @@ function LoginForm() {
       toast.error("Authentication callback failed. Please sign in again.");
     }
   }, [urlError]);
+
+  // Detect recovery tokens (from email reset links or hash fragments) and redirect to /auth/reset-password
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      const hash = window.location.hash;
+      const isRecovery =
+        hash.includes("type=recovery") || searchParams.get("type") === "recovery";
+      if (isRecovery) {
+        router.replace(`/auth/reset-password${hash}`);
+        return;
+      }
+    }
+
+    const supabase = createClient();
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        router.replace("/auth/reset-password");
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [router, searchParams]);
 
   const {
     register,
@@ -55,7 +87,7 @@ function LoginForm() {
       }
 
       toast.success("Signed in successfully");
-      router.push("/dashboard");
+      router.push(safeNext);
       router.refresh();
     } catch {
       toast.error("Unexpected error signing in");
@@ -159,11 +191,14 @@ function LoginForm() {
           </div>
         </div>
 
-        <GoogleAuthButton mode="login" />
+        <GoogleAuthButton mode="login" next={safeNext} />
 
         <p className="mt-2 text-center text-xs text-[var(--muted-foreground)]">
           Don&apos;t have an account yet?{" "}
-          <Link href="/signup" className="font-bold text-sky-400 hover:text-sky-300 underline-offset-4 hover:underline">
+          <Link
+            href={safeNext !== "/dashboard" ? `/signup?next=${encodeURIComponent(safeNext)}` : "/signup"}
+            className="font-bold text-sky-400 hover:text-sky-300 underline-offset-4 hover:underline"
+          >
             Sign up
           </Link>
         </p>

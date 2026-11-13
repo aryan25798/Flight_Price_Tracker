@@ -2,7 +2,15 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function updateSession(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request });
+  const requestHeaders = new Headers(request.headers);
+  const currentPath = request.nextUrl.pathname + request.nextUrl.search;
+  requestHeaders.set("x-pathname", currentPath);
+
+  let supabaseResponse = NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
 
   // FAST PATH: If the request contains no Supabase auth token cookies,
   // return immediately without making a blocking remote network call.
@@ -25,7 +33,11 @@ export async function updateSession(request: NextRequest) {
         },
         setAll(cookiesToSet: { name: string; value: string; options?: CookieOptions }[]) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-          supabaseResponse = NextResponse.next({ request });
+          supabaseResponse = NextResponse.next({
+            request: {
+              headers: requestHeaders,
+            },
+          });
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options),
           );

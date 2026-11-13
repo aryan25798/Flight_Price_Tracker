@@ -37,7 +37,13 @@ import { createTrackerAction } from "@/app/dashboard/actions";
 import { checkCurrentPriceAction, type FlightPriceQuote } from "@/app/dashboard/price-action";
 import { cn } from "@/lib/utils";
 
-export function FlightSearchForm() {
+export function FlightSearchForm({
+  initialOrigin,
+  initialDestination,
+}: {
+  initialOrigin?: string;
+  initialDestination?: string;
+} = {}) {
   const [submitting, setSubmitting] = React.useState(false);
   const [checkingPrice, setCheckingPrice] = React.useState(false);
   const [directOnly, setDirectOnly] = React.useState(false);
@@ -56,8 +62,8 @@ export function FlightSearchForm() {
   } = useForm<CreateTrackerInput>({
     resolver: zodResolver(CreateTrackerSchema),
     defaultValues: {
-      origin: "",
-      destination: "",
+      origin: initialOrigin?.toUpperCase() || "",
+      destination: initialDestination?.toUpperCase() || "",
       departureDate: "",
       returnDate: "",
       tripType: "one_way",

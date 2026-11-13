@@ -44,3 +44,24 @@ export function formatRelativeTime(isoTimestamp: string | null | undefined): str
   if (diffHrs < 24) return `${diffHrs}h ago`;
   return `${Math.round(diffHrs / 24)}d ago`;
 }
+
+/**
+ * Returns the canonical base URL of the running application.
+ * Automatically adapts across Vercel production/preview deployments, custom domains, and local dev.
+ */
+export function getAppUrl(): string {
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    return process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "");
+  }
+  if (process.env.NEXT_PUBLIC_SITE_URL) {
+    return process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "");
+  }
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  if (typeof window !== "undefined" && window.location.origin) {
+    return window.location.origin;
+  }
+  return "http://localhost:3000";
+}
+
