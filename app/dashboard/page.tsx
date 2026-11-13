@@ -40,41 +40,33 @@ export default async function DashboardPage({
   const supabase = await createClient();
 
   const [
-    { count: totalCount },
+    { count: totalCount, data: trackersData },
     { count: activeCount },
-    { count: pausedCount },
     { count: dropsCount },
-    { data: trackersData },
   ] = await Promise.all([
     supabase
       .from("tracked_flights")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", user.id),
+      .select(
+        "id, user_id, route_id, origin, destination, departure_date, return_date, trip_type, adults, children, infants, cabin_class, currency, target_price, last_seen_price, last_notified_price, last_notified_at, is_active, created_at, updated_at, monitored_routes(last_checked_at, last_airline, last_booking_url, status)",
+        { count: "exact" },
+      )
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .range(from, to),
     supabase
       .from("tracked_flights")
       .select("id", { count: "exact", head: true })
       .eq("user_id", user.id)
       .eq("is_active", true),
     supabase
-      .from("tracked_flights")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .eq("is_active", false),
-    supabase
       .from("notification_logs")
       .select("id", { count: "exact", head: true })
       .eq("user_id", user.id)
       .eq("notification_type", "price_drop")
       .eq("delivery_status", "sent"),
-    supabase
-      .from("tracked_flights")
-      .select(
-        "id, user_id, route_id, origin, destination, departure_date, return_date, trip_type, adults, children, infants, cabin_class, currency, target_price, last_seen_price, last_notified_price, last_notified_at, is_active, created_at, updated_at, monitored_routes(last_checked_at, last_airline, last_booking_url, status)",
-      )
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .range(from, to),
   ]);
+
+  const pausedCount = Math.max(0, (totalCount ?? 0) - (activeCount ?? 0));
 
   const trackers = (trackersData ?? []) as unknown as TrackedFlight[];
   const telegramLinked = Boolean(profile.telegram_chat_id);
