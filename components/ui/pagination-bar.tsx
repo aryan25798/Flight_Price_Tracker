@@ -143,7 +143,9 @@ export function PaginationBar({
   };
 
   return (
-    <div
+    <nav
+      role="navigation"
+      aria-label="Pagination"
       className={cn(
         "flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-[var(--border)] text-xs text-[var(--muted-foreground)]",
         className,
@@ -237,6 +239,6 @@ export function PaginationBar({
             currentPage >= totalPages,
           )}
       </div>
-    </div>
+    </nav>
   );
 }

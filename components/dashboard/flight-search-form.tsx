@@ -44,6 +44,8 @@ import {
 } from "@/lib/validations/tracker";
 import { createTrackerAction } from "@/app/dashboard/actions";
 import { checkCurrentPriceAction, type FlightPriceQuote } from "@/app/dashboard/price-action";
+import { FlightSearchResults } from "@/components/dashboard/flight-search-results";
+import type { SearchResultSnapshot, NormalizedFlightOffer, FlightSearchQuery } from "@/lib/flights/search-service";
 import { cn } from "@/lib/utils";
 import type { UserQuota } from "@/types/database";
 
@@ -59,6 +61,12 @@ export function FlightSearchForm({
   const [submitting, setSubmitting] = React.useState(false);
   const [checkingPrice, setCheckingPrice] = React.useState(false);
   const [directOnly, setDirectOnly] = React.useState(false);
+  const [searchResults, setSearchResults] = React.useState<SearchResultSnapshot | null>(null);
+  const [activeSort, setActiveSort] = React.useState<FlightSearchQuery["sortBy"]>("cheapest");
+  const [activeFilters, setActiveFilters] = React.useState<FlightSearchQuery["filters"]>({});
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const [currentPageSize, setCurrentPageSize] = React.useState(10);
+  const [selectedOffer, setSelectedOffer] = React.useState<NormalizedFlightOffer | null>(null);
   const [quote, setQuote] = React.useState<FlightPriceQuote | null>(null);
   const [optionsPage, setOptionsPage] = React.useState(1);
   const [optionsSort, setOptionsSort] = React.useState<"price" | "direct" | "airline">("price");
@@ -124,6 +132,8 @@ export function FlightSearchForm({
 
   React.useEffect(() => {
     setQuote(null);
+    setSearchResults(null);
+    setSelectedOffer(null);
   }, [origin, destination, departureDate, returnDate, tripType, currency, directOnly]);
 
   function handleSwapAirports() {
@@ -133,7 +143,7 @@ export function FlightSearchForm({
     setValue("destination", currentOrigin, { shouldValidate: true });
   }
 
-  async function handleCheckPrice() {
+  async function handleCheckPrice(overrideParams?: Partial<FlightSearchQuery>) {
     if (!origin || origin.length !== 3) {
       toast.error("Please select an origin airport");
       return;
@@ -156,26 +166,49 @@ export function FlightSearchForm({
     }
 
     setCheckingPrice(true);
-    setQuote(null);
     try {
-      const res = await checkCurrentPriceAction({
-        origin,
-        destination,
-        departureDate,
-        returnDate: tripType === "round_trip" ? returnDate : null,
-        tripType,
-        currency,
-        directOnly,
+      const pageToUse = overrideParams?.page ?? currentPage;
+      const pageSizeToUse = overrideParams?.pageSize ?? currentPageSize;
+      const sortToUse = overrideParams?.sortBy ?? activeSort;
+      const filtersToUse = overrideParams?.filters ?? activeFilters;
+
+      const res = await fetch("/api/flights/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          origin,
+          destination,
+          departureDate,
+          returnDate: tripType === "round_trip" ? returnDate : null,
+          tripType,
+          adults: watch("adults") || 1,
+          children: watch("children") || 0,
+          infants: watch("infants") || 0,
+          cabinClass: watch("cabinClass") || "economy",
+          currency,
+          directOnly,
+          page: pageToUse,
+          pageSize: pageSizeToUse,
+          sortBy: sortToUse,
+          filters: filtersToUse,
+        }),
       });
 
-      setQuote(res);
+      if (!res.ok) {
+        throw new Error("Failed to fetch flight search results");
+      }
 
-      if (res.found && res.bestPrice) {
-        toast.success(`Found ${res.options?.length || 1} fare(s) from ${formatCurrency(res.bestPrice, currency)}`);
-        const suggested = Math.max(1, Math.round(res.bestPrice * 0.95));
-        setValue("targetPrice", suggested, { shouldValidate: true });
+      const data: SearchResultSnapshot = await res.json();
+      setSearchResults(data);
+
+      if (data.totalOffers > 0 && data.offers.length > 0) {
+        toast.success(`Found ${data.totalOffers} distinct flight offer(s) from ${formatCurrency(data.minPrice, currency)}`);
+        if (!selectedOffer && data.minPrice > 0) {
+          const suggested = Math.max(1, Math.round(data.minPrice * 0.95));
+          setValue("targetPrice", suggested, { shouldValidate: true });
+        }
       } else {
-        toast.info(res.message || "No cached flights found for this date. You can still set your target price!");
+        toast.info(data.priceReliability?.notice || "No cached flights found for this date. You can still set your target price!");
       }
     } catch {
       toast.error("Failed to check current prices");
@@ -194,10 +227,20 @@ export function FlightSearchForm({
       }
       toast.success(result.message);
       setQuote(null);
+      setSearchResults(null);
+      setSelectedOffer(null);
       reset({
         ...values,
         origin: "",
         destination: "",
+        flightNumber: "",
+        airlineCode: "",
+        airlineName: "",
+        departureTime: "",
+        arrivalTime: "",
+        itineraryFingerprint: "",
+        bookingUrl: "",
+        trackingMode: "route",
       });
     } catch {
       toast.error("Unexpected error creating tracker");
@@ -461,7 +504,7 @@ export function FlightSearchForm({
               type="button"
               variant="outline"
               disabled={!canCheckPrice || checkingPrice}
-              onClick={handleCheckPrice}
+              onClick={() => handleCheckPrice()}
               className="gap-2 text-xs sm:text-sm font-bold min-h-[42px]"
             >
               {checkingPrice ? (
@@ -490,255 +533,85 @@ export function FlightSearchForm({
             )}
           </div>
 
-          {/* Live Airline Fare Comparison Results Drawer */}
-          {quote && (
-            <div className="rounded-2xl border border-sky-500/30 glass-surface-2 p-4 sm:p-5 text-sm space-y-4 animate-in fade-in duration-200">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border)] pb-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-sky-500/15 text-sky-400 border border-sky-500/30">
-                    <Sparkles className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-sm text-[var(--foreground)]">
-                      Live Fares Found ({quote.options?.length || 0} Seller Options)
-                    </h4>
-                    {quote.message && (
-                      <p className="text-xs text-[var(--muted-foreground)]">{quote.message}</p>
-                    )}
-                  </div>
+          {/* Phase 5 Premium Flight Search & Comparison Engine Results */}
+          {(searchResults || checkingPrice) && (
+            <FlightSearchResults
+              results={searchResults}
+              loading={checkingPrice}
+              currency={currency}
+              onSelectExactFlight={(offer) => {
+                setSelectedOffer(offer);
+                setValue("trackingMode", "exact_flight");
+                setValue("flightNumber", offer.flightNumber);
+                setValue("airlineCode", offer.airlineCode);
+                setValue("airlineName", offer.airline);
+                setValue("departureTime", offer.departureTime);
+                setValue("arrivalTime", offer.arrivalTime);
+                setValue("itineraryFingerprint", offer.itineraryFingerprint);
+                setValue("bookingUrl", offer.bookingUrl || "");
+                const discounted = Math.max(1, Math.round(offer.price * 0.95));
+                setValue("targetPrice", discounted, { shouldValidate: true });
+                toast.success(
+                  `Selected ${offer.airline} #${offer.flightNumber} (${offer.departureTime} departure). Target price set to ${formatCurrency(discounted, currency)}.`
+                );
+              }}
+              onSortChange={(newSort) => {
+                setActiveSort(newSort);
+                handleCheckPrice({ sortBy: newSort, page: 1 });
+              }}
+              onFilterChange={(newFilters) => {
+                setActiveFilters(newFilters);
+                handleCheckPrice({ filters: newFilters, page: 1 });
+              }}
+              onPageChange={(newPage) => {
+                setCurrentPage(newPage);
+                handleCheckPrice({ page: newPage });
+              }}
+              onPageSizeChange={(newSize) => {
+                setCurrentPageSize(newSize);
+                setCurrentPage(1);
+                handleCheckPrice({ pageSize: newSize, page: 1 });
+              }}
+              activeSort={activeSort}
+              activeFilters={activeFilters}
+            />
+          )}
+
+          {/* Exact Flight Selected Confirmation Banner */}
+          {selectedOffer && (
+            <div className="rounded-2xl border border-sky-500/40 bg-sky-950/40 p-3.5 text-xs flex items-center justify-between gap-3 animate-in fade-in shadow-md">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-sky-500/20 text-sky-400 border border-sky-400/30">
+                  <Plane className="h-4 w-4" />
                 </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      window.dispatchEvent(
-                        new CustomEvent("aerodrop:open-copilot", {
-                          detail: {
-                            prompt: `Evaluate live airline deals for ${origin} → ${destination} on ${departureDate}. Lowest fare is ${formatCurrency(quote.bestPrice || 0, quote.currency || currency)} with ${quote.options?.length || 0} seller options found. Is this a good time to book or should I set an alert?`,
-                          },
-                        })
-                      );
-                    }}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-sky-500/30 bg-sky-500/15 hover:bg-sky-500/25 px-2.5 py-1 text-xs font-bold text-sky-300 transition-all cursor-pointer shadow-2xs"
-                    title="Ask AI to evaluate these flight offers"
-                  >
-                    <Sparkles className="h-3 w-3 text-sky-400" />
-                    <span>Evaluate with AI</span>
-                  </button>
-
-                  {quote.bestPrice && (
-                    <Badge variant="success" dot className="text-xs">
-                      Lowest: {formatCurrency(quote.bestPrice, quote.currency || currency)}
-                    </Badge>
-                  )}
+                <div className="space-y-0.5 truncate">
+                  <p className="font-extrabold text-white truncate">
+                    Tracking Exact Flight: {selectedOffer.airline} {selectedOffer.flightNumber}
+                  </p>
+                  <p className="text-[11px] text-slate-300 truncate">
+                    Departs {selectedOffer.departureTime} ({selectedOffer.originAirport}) → Arrives {selectedOffer.arrivalTime} ({selectedOffer.destinationAirport}) · {selectedOffer.formattedPrice}
+                  </p>
                 </div>
               </div>
-
-              {quote.options && quote.options.length > 0 ? (
-                <div className="space-y-3">
-                  {/* Sorting controls if options > 1 */}
-                  {sortedOptions.length > 1 && (
-                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                      <span className="text-[var(--muted-foreground)]">Sort offers by:</span>
-                      <div className="inline-flex rounded-lg border border-[var(--border)] p-0.5 glass-surface-3">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setOptionsSort("price");
-                            setOptionsPage(1);
-                          }}
-                          className={cn(
-                            "px-2.5 py-1 rounded-md font-medium transition-all text-xs cursor-pointer",
-                            optionsSort === "price"
-                              ? "bg-sky-500/20 text-sky-300 font-bold"
-                              : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
-                          )}
-                        >
-                          Lowest Price
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setOptionsSort("direct");
-                            setOptionsPage(1);
-                          }}
-                          className={cn(
-                            "px-2.5 py-1 rounded-md font-medium transition-all text-xs cursor-pointer",
-                            optionsSort === "direct"
-                              ? "bg-sky-500/20 text-sky-300 font-bold"
-                              : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
-                          )}
-                        >
-                          Non-Stop First
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setOptionsSort("airline");
-                            setOptionsPage(1);
-                          }}
-                          className={cn(
-                            "px-2.5 py-1 rounded-md font-medium transition-all text-xs cursor-pointer",
-                            optionsSort === "airline"
-                              ? "bg-sky-500/20 text-sky-300 font-bold"
-                              : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
-                          )}
-                        >
-                          Airline
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="grid gap-2.5">
-                    {pagedOptions.map((opt, idx) => (
-                      <div
-                        key={opt.id || idx}
-                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-[var(--border)] glass-surface-3 p-3.5 hover:border-sky-500/40 hover:shadow-xs transition-all"
-                      >
-                        <div className="space-y-1.5 flex-1 min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-bold text-sm text-[var(--foreground)]">{opt.airline}</span>
-                            {opt.flightNumber && (
-                              <span className="font-mono text-xs text-sky-400 bg-sky-950/60 px-1.5 py-0.5 rounded border border-sky-500/20">
-                                {opt.airlineCode ? `${opt.airlineCode} ${opt.flightNumber}` : `#${opt.flightNumber}`}
-                              </span>
-                            )}
-                            <Badge variant={opt.isDirect ? "success" : "secondary"}>
-                              {opt.isDirect ? "Non-Stop" : `${opt.transfers} stop(s)`}
-                            </Badge>
-                            {opt.isOvernight && (
-                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                                +{opt.dayDifference} Day (Overnight)
-                              </span>
-                            )}
-                            <span className="text-[9px] font-mono text-slate-400 bg-white/5 px-1.5 py-0.5 rounded border border-white/10">
-                              {opt.priceStatus === "CACHED_PRICE" ? "48h Cache" : "Live Price"}
-                            </span>
-                          </div>
-
-                          {/* Flight Timeline Schedule */}
-                          <div className="flex items-center gap-2 text-xs">
-                            <span className="font-bold text-[var(--foreground)] text-sm">
-                              {opt.departureTimeLocal || "—"}
-                            </span>
-                            <span className="text-[var(--muted-foreground)] text-[11px] font-mono">({origin})</span>
-                            <span className="text-[var(--muted-foreground)]">→</span>
-                            <span className="font-bold text-[var(--foreground)] text-sm">
-                              {opt.arrivalTimeLocal || "—"}
-                            </span>
-                            <span className="text-[var(--muted-foreground)] text-[11px] font-mono">({destination})</span>
-                            {opt.durationFormatted && (
-                              <span className="text-[11px] text-slate-400 ml-1">
-                                • {opt.durationFormatted}
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--muted-foreground)]">
-                            <span>
-                              Departure: <strong className="text-[var(--foreground)]">{formatCalendarDate(opt.departureDateOnly || departureDate)}</strong>
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Store className="h-3 w-3" />
-                              Seller: <strong className="text-[var(--foreground)]">{opt.seller}</strong>
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2.5 self-end sm:self-center shrink-0">
-                          <div className="text-right">
-                            <span className="text-base sm:text-lg font-bold tabular-nums text-sky-400">
-                              {formatCurrency(opt.price, opt.currency)}
-                            </span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setValue("targetPrice", Math.round(opt.price * 0.95), { shouldValidate: true });
-                              setValue("trackingMode", "exact_flight");
-                              if (opt.flightNumber) setValue("flightNumber", opt.flightNumber);
-                              if (opt.airlineCode) setValue("airlineCode", opt.airlineCode);
-                              if (opt.airline) setValue("airlineName", opt.airline);
-                              if (opt.departureTimeLocal) setValue("departureTime", opt.departureTimeLocal);
-                              if (opt.arrivalTimeLocal) setValue("arrivalTime", opt.arrivalTimeLocal);
-                              if (opt.bookingUrl) setValue("bookingUrl", opt.bookingUrl);
-                              if (opt.id) setValue("itineraryFingerprint", opt.id);
-                              toast.success(`Target set to ${formatCurrency(Math.round(opt.price * 0.95), currency)} for ${opt.airline} #${opt.flightNumber || ""}! Click "Activate Radar Tracker" to save.`);
-                            }}
-                            className="inline-flex items-center gap-1 rounded-xl border border-sky-400/30 bg-sky-500/15 hover:bg-sky-500/25 px-3 py-1.5 text-xs font-bold text-sky-300 transition-all cursor-pointer shadow-2xs"
-                            title="Set price tracker for this specific flight"
-                          >
-                            <Plane className="h-3 w-3" />
-                            <span>Track</span>
-                          </button>
-                          <a
-                            href={opt.bookingUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 rounded-xl btn-glass-primary px-3.5 py-1.5 text-xs font-bold text-white shadow-xs transition-all"
-                          >
-                            <span>Book</span>
-                            <ExternalLink className="h-3 w-3" />
-                          </a>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {sortedOptions.length > OPTIONS_PAGE_SIZE && (
-                    <PaginationBar
-                      page={optionsPage}
-                      pageSize={OPTIONS_PAGE_SIZE}
-                      total={sortedOptions.length}
-                      onPageChange={setOptionsPage}
-                      itemLabel="offers"
-                    />
-                  )}
-                </div>
-              ) : (
-                <p className="text-xs text-[var(--muted-foreground)]">
-                  {quote.message || "No cached flights found for this date. You can still set your target price to monitor!"}
-                </p>
-              )}
-
-              {/* Multi-Site Comparison Row */}
-              {quote.comparisonSites && quote.comparisonSites.length > 0 && (
-                <div className="pt-3 border-t border-[var(--border)] space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-[var(--foreground)] flex items-center gap-1.5">
-                      <Globe className="h-3.5 w-3.5 text-sky-400" />
-                      Compare Live Rates Across Top Travel Sites
-                    </span>
-                    <span className="text-[10px] text-[var(--muted-foreground)]">
-                      Instant 1-click comparison
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                    {quote.comparisonSites.map((site) => (
-                      <a
-                        key={site.id}
-                        href={site.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center justify-between p-3 rounded-xl border border-[var(--border)] glass-surface-3 hover:border-sky-500/50 hover:shadow-xs transition-all text-xs group"
-                      >
-                        <div className="truncate">
-                          <span className="font-bold text-[var(--foreground)] block truncate">
-                            {site.name}
-                          </span>
-                          <span className="text-[10px] text-[var(--muted-foreground)] block truncate">
-                            {site.tag}
-                          </span>
-                        </div>
-                        <ExternalLink className="h-3.5 w-3.5 text-[var(--muted-foreground)] group-hover:text-sky-400 shrink-0 ml-1.5 transition-colors" />
-                      </a>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSelectedOffer(null);
+                  setValue("trackingMode", "route");
+                  setValue("flightNumber", "");
+                  setValue("airlineCode", "");
+                  setValue("airlineName", "");
+                  setValue("departureTime", "");
+                  setValue("arrivalTime", "");
+                  setValue("itineraryFingerprint", "");
+                  setValue("bookingUrl", "");
+                }}
+                className="text-slate-400 hover:text-white text-[11px] h-8 shrink-0 rounded-lg hover:bg-white/10 cursor-pointer"
+              >
+                Clear Selection
+              </Button>
             </div>
           )}
 
@@ -790,6 +663,8 @@ export function FlightSearchForm({
               <span>
                 {Boolean(quotaInfo) && !quotaInfo?.is_unlimited && quotaInfo?.remaining === 0
                   ? `Quota Reached (${quotaInfo?.effective_limit}/${quotaInfo?.effective_limit})`
+                  : selectedOffer
+                  ? `Activate Radar for ${selectedOffer.airline} #${selectedOffer.flightNumber}`
                   : "Activate Route Tracker"}
               </span>
             </Button>
