@@ -98,6 +98,7 @@ export function FlightSearchResults({
   activeFilters,
 }: FlightSearchResultsProps) {
   const [showFiltersDrawer, setShowFiltersDrawer] = React.useState(false);
+  const [expandedOffers, setExpandedOffers] = React.useState<Record<string, boolean>>({});
 
   // Loading skeleton state
   if (loading) {
@@ -159,8 +160,6 @@ export function FlightSearchResults({
     Boolean(activeFilters?.airlines?.length) ||
     Boolean(activeFilters?.depTimeSlot?.length) ||
     Boolean(activeFilters?.maxPrice && activeFilters.maxPrice < maxPrice);
-
-  const [expandedOffers, setExpandedOffers] = React.useState<Record<string, boolean>>({});
 
   function handleToggleStop(stopCount: number) {
     const current = activeFilters?.stops || [];
