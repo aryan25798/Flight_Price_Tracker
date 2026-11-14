@@ -3,33 +3,60 @@ import { TrackersTable } from "@/components/dashboard/trackers-table";
 import { Badge } from "@/components/ui/badge";
 import type { TrackedFlight } from "@/types/database";
 
-const PAGE_SIZE = 15;
+const DEFAULT_PAGE_SIZE = 15;
 
 export default async function TrackersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{
+    page?: string;
+    search?: string;
+    status?: string;
+    pageSize?: string;
+  }>;
 }) {
   const { user, profile } = await getAuthenticatedProfile();
   const params = await searchParams;
   const page = Math.max(1, Number(params.page ?? "1") || 1);
-  const from = (page - 1) * PAGE_SIZE;
-  const to = from + PAGE_SIZE - 1;
+  const pageSize = Math.min(
+    100,
+    Math.max(5, Number(params.pageSize ?? String(DEFAULT_PAGE_SIZE)) || DEFAULT_PAGE_SIZE),
+  );
+  const search = params.search?.trim() ?? "";
+  const status =
+    params.status === "active" || params.status === "paused" ? params.status : "all";
+
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
 
   const supabase = await createClient();
+
+  let trackersQuery = supabase
+    .from("tracked_flights")
+    .select(
+      "id, user_id, route_id, origin, destination, departure_date, return_date, trip_type, adults, children, infants, cabin_class, currency, target_price, last_seen_price, last_notified_price, last_notified_at, is_active, created_at, updated_at, monitored_routes(last_checked_at, last_airline, last_booking_url, status)",
+      { count: "exact" },
+    )
+    .eq("user_id", user.id);
+
+  if (search) {
+    const cleanSearch = search.toUpperCase();
+    trackersQuery = trackersQuery.or(
+      `origin.ilike.%${cleanSearch}%,destination.ilike.%${cleanSearch}%`,
+    );
+  }
+
+  if (status === "active") {
+    trackersQuery = trackersQuery.eq("is_active", true);
+  } else if (status === "paused") {
+    trackersQuery = trackersQuery.eq("is_active", false);
+  }
+
   const [
     { data, count },
     { count: activeCount },
   ] = await Promise.all([
-    supabase
-      .from("tracked_flights")
-      .select(
-        "id, user_id, route_id, origin, destination, departure_date, return_date, trip_type, adults, children, infants, cabin_class, currency, target_price, last_seen_price, last_notified_price, last_notified_at, is_active, created_at, updated_at, monitored_routes(last_checked_at, last_airline, last_booking_url, status)",
-        { count: "exact" },
-      )
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .range(from, to),
+    trackersQuery.order("created_at", { ascending: false }).range(from, to),
     supabase
       .from("tracked_flights")
       .select("id", { count: "exact", head: true })
@@ -80,8 +107,10 @@ export default async function TrackersPage({
         trackers={(data ?? []) as unknown as TrackedFlight[]}
         total={count ?? 0}
         page={page}
-        pageSize={PAGE_SIZE}
+        pageSize={pageSize}
         basePath="/dashboard/trackers"
+        initialSearch={search}
+        initialStatus={status}
       />
     </div>
   );

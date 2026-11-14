@@ -3,6 +3,7 @@
 import * as React from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowRight,
   Bell,
@@ -16,6 +17,7 @@ import {
   Plane,
   Play,
   Radio,
+  Search,
   Sparkles,
   Store,
   Tag,
@@ -28,6 +30,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PaginationBar } from "@/components/ui/pagination-bar";
 import { formatCurrency, formatDateShort, formatRelativeTime } from "@/lib/utils";
 import { generateMultiSiteComparisonLinks } from "@/lib/flight-urls";
 import type { TrackedFlight } from "@/types/database";
@@ -47,6 +50,8 @@ interface TrackersTableProps {
   page: number;
   pageSize: number;
   basePath?: string;
+  initialSearch?: string;
+  initialStatus?: string;
 }
 
 export function TrackersTable({
@@ -55,11 +60,58 @@ export function TrackersTable({
   page,
   pageSize,
   basePath = "/dashboard",
+  initialSearch = "",
+  initialStatus = "all",
 }: TrackersTableProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [busyId, setBusyId] = React.useState<string | null>(null);
   const [chartTracker, setChartTracker] = React.useState<TrackedFlight | null>(null);
   const [compareTracker, setCompareTracker] = React.useState<TrackedFlight | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<TrackedFlight | null>(null);
+
+  const [searchInput, setSearchInput] = React.useState(initialSearch);
+  const [currentStatus, setCurrentStatus] = React.useState(initialStatus);
+
+  React.useEffect(() => {
+    setSearchInput(initialSearch);
+  }, [initialSearch]);
+
+  React.useEffect(() => {
+    setCurrentStatus(initialStatus);
+  }, [initialStatus]);
+
+  const createPageUrl = (targetPage: number) => {
+    const sp = new URLSearchParams(searchParams.toString());
+    sp.set("page", String(targetPage));
+    if (pageSize) sp.set("pageSize", String(pageSize));
+    return `${basePath}?${sp.toString()}`;
+  };
+
+  const handlePageSizeChange = (newSize: number) => {
+    const sp = new URLSearchParams(searchParams.toString());
+    sp.set("page", "1");
+    sp.set("pageSize", String(newSize));
+    router.push(`${basePath}?${sp.toString()}`);
+  };
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const sp = new URLSearchParams(searchParams.toString());
+    if (searchInput.trim()) sp.set("search", searchInput.trim());
+    else sp.delete("search");
+    sp.set("page", "1");
+    router.push(`${basePath}?${sp.toString()}`);
+  };
+
+  const handleStatusFilter = (newStatus: "all" | "active" | "paused") => {
+    setCurrentStatus(newStatus);
+    const sp = new URLSearchParams(searchParams.toString());
+    if (newStatus !== "all") sp.set("status", newStatus);
+    else sp.delete("status");
+    sp.set("page", "1");
+    router.push(`${basePath}?${sp.toString()}`);
+  };
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -103,7 +155,7 @@ export function TrackersTable({
     <>
       <Card className="glass-surface-1 border-[var(--border)] shadow-xl overflow-hidden">
         <CardHeader className="border-b border-[var(--border)] glass-surface-2/40 pb-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="space-y-1">
               <div className="flex items-center gap-2.5">
                 <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
@@ -118,11 +170,37 @@ export function TrackersTable({
               </CardDescription>
             </div>
 
-            {totalPages > 1 && (
-              <div className="flex items-center gap-1 self-start sm:self-auto text-xs text-[var(--muted-foreground)]">
-                <span>Page {page} of {totalPages}</span>
+            {/* Live Filter & Route Search Bar */}
+            <div className="flex flex-wrap items-center gap-2.5">
+              <form onSubmit={handleSearchSubmit} className="relative flex-1 sm:w-56">
+                <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-[var(--muted-foreground)]" />
+                <input
+                  type="text"
+                  placeholder="Filter route (e.g. DEL)..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  className="h-8 w-full rounded-xl border border-[var(--border)] bg-[var(--card)] pl-8 pr-2.5 text-xs text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:ring-1 focus:ring-sky-500"
+                />
+              </form>
+
+              <div className="flex items-center gap-1 rounded-xl border border-[var(--border)] bg-[var(--card)] p-0.5 text-xs">
+                {(["all", "active", "paused"] as const).map((st) => (
+                  <button
+                    key={st}
+                    type="button"
+                    onClick={() => handleStatusFilter(st)}
+                    className={cn(
+                      "px-2.5 py-1 rounded-lg font-semibold capitalize transition-all cursor-pointer",
+                      currentStatus === st
+                        ? "bg-sky-500/20 text-sky-300 font-bold"
+                        : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]",
+                    )}
+                  >
+                    {st}
+                  </button>
+                ))}
               </div>
-            )}
+            </div>
           </div>
         </CardHeader>
 
@@ -431,41 +509,17 @@ export function TrackersTable({
           )}
 
           {/* Pagination Footer */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between border-t border-[var(--border)] px-5 py-3.5 text-xs text-[var(--muted-foreground)]">
-              <div>
-                Showing page <strong className="text-[var(--foreground)]">{page}</strong> of{" "}
-                <strong className="text-[var(--foreground)]">{totalPages}</strong>
-              </div>
-              <div className="flex items-center gap-1.5">
-                {page > 1 ? (
-                  <Link href={`${basePath}?page=${page - 1}`}>
-                    <Button variant="outline" size="sm" className="h-8 px-3 text-xs gap-1 font-semibold">
-                      <ChevronLeft className="h-3.5 w-3.5" />
-                      Prev
-                    </Button>
-                  </Link>
-                ) : (
-                  <Button variant="outline" size="sm" disabled className="h-8 px-3 text-xs gap-1 opacity-50 font-semibold">
-                    <ChevronLeft className="h-3.5 w-3.5" />
-                    Prev
-                  </Button>
-                )}
-
-                {page < totalPages ? (
-                  <Link href={`${basePath}?page=${page + 1}`}>
-                    <Button variant="outline" size="sm" className="h-8 px-3 text-xs gap-1 font-semibold">
-                      Next
-                      <ChevronRight className="h-3.5 w-3.5" />
-                    </Button>
-                  </Link>
-                ) : (
-                  <Button variant="outline" size="sm" disabled className="h-8 px-3 text-xs gap-1 opacity-50 font-semibold">
-                    Next
-                    <ChevronRight className="h-3.5 w-3.5" />
-                  </Button>
-                )}
-              </div>
+          {total > 0 && (
+            <div className="px-5 pb-4">
+              <PaginationBar
+                page={page}
+                pageSize={pageSize}
+                total={total}
+                createPageUrl={createPageUrl}
+                pageSizeOptions={[10, 15, 25, 50]}
+                onPageSizeChange={handlePageSizeChange}
+                itemLabel="routes"
+              />
             </div>
           )}
         </CardContent>

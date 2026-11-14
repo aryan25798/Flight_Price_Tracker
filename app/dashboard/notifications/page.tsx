@@ -2,20 +2,24 @@ import { createClient, getAuthenticatedProfile } from "@/lib/supabase/server";
 import { NotificationCenter } from "@/components/notifications/notification-center";
 import type { NotificationLog } from "@/types/database";
 
-const PAGE_SIZE = 10;
+const DEFAULT_PAGE_SIZE = 10;
 
 export default async function NotificationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; filter?: string }>;
+  searchParams: Promise<{ page?: string; filter?: string; pageSize?: string }>;
 }) {
   const { user } = await getAuthenticatedProfile();
   const params = await searchParams;
   const page = Math.max(1, Number(params.page ?? "1") || 1);
+  const pageSize = Math.min(
+    50,
+    Math.max(5, Number(params.pageSize ?? String(DEFAULT_PAGE_SIZE)) || DEFAULT_PAGE_SIZE),
+  );
   const filter = (params.filter as "all" | "unread" | "price_drop") || "all";
 
-  const from = (page - 1) * PAGE_SIZE;
-  const to = from + PAGE_SIZE - 1;
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
 
   const supabase = await createClient();
 
@@ -95,7 +99,7 @@ export default async function NotificationsPage({
       notifications={notifications}
       total={filteredCount ?? totalCount ?? 0}
       page={page}
-      pageSize={PAGE_SIZE}
+      pageSize={pageSize}
       unreadCount={unreadCount ?? 0}
       priceDropCount={priceDropCount ?? 0}
       currentFilter={filter}

@@ -3,14 +3,33 @@ import { callAdminEdgeFunction } from "@/services/admin/admin-api";
 import { AdminLiveOverview } from "@/components/admin/admin-live-overview";
 import type { AdminStats, PollingRunRow } from "@/app/admin/actions";
 
-export default async function AdminOverviewPage() {
+export default async function AdminOverviewPage(props: {
+  searchParams?: Promise<{ runsPage?: string; runsPageSize?: string }>;
+}) {
   await requireSuperAdminProfile();
+  const searchParams = props.searchParams ? await props.searchParams : {};
+  const runsPage = Math.max(1, Number(searchParams?.runsPage) || 1);
+  const runsPageSize = Math.min(50, Math.max(5, Number(searchParams?.runsPageSize) || 10));
+  const runsFrom = (runsPage - 1) * runsPageSize;
+  const runsTo = runsFrom + runsPageSize - 1;
+
   const supabase = await createClient();
 
   // 1. Direct authenticated RPC query (fastest, direct DB evaluation)
-  // 2. Fallback to Edge function if needed
-  const [{ data: rpcStats, error: rpcError }, { data: recentRuns }] = await Promise.all([
+  // 2. Paginated polling runs ledger + latest runs for trend chart
+  const [
+    { data: rpcStats, error: rpcError },
+    { data: recentRuns, count: runsCount },
+    { data: chartRuns },
+  ] = await Promise.all([
     supabase.rpc("get_admin_dashboard_stats"),
+    supabase
+      .from("polling_runs")
+      .select("id, started_at, status, routes_succeeded, routes_failed, notifications_sent", {
+        count: "exact",
+      })
+      .order("started_at", { ascending: false })
+      .range(runsFrom, runsTo),
     supabase
       .from("polling_runs")
       .select("id, started_at, status, routes_succeeded, routes_failed, notifications_sent")
@@ -45,6 +64,10 @@ export default async function AdminOverviewPage() {
     <AdminLiveOverview
       initialStats={stats}
       initialRuns={(recentRuns ?? []) as PollingRunRow[]}
+      chartRuns={(chartRuns ?? []) as PollingRunRow[]}
+      runsTotal={runsCount ?? 0}
+      runsPage={runsPage}
+      runsPageSize={runsPageSize}
     />
   );
 }

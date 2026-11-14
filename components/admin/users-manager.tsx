@@ -32,6 +32,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { PaginationBar } from "@/components/ui/pagination-bar";
 import { formatCurrency, formatDateShort } from "@/lib/utils";
 import type { Profile, TrackedFlight, UserTier } from "@/types/database";
 
@@ -62,6 +63,7 @@ export function UsersManager({
     user: Profile;
     trackers: TrackedFlight[];
   } | null>(null);
+  const [modalTrackersPage, setModalTrackersPage] = React.useState(1);
   const [confirmAction, setConfirmAction] = React.useState<{
     type: "ban_user" | "unban_user" | "delete_user";
     user: Profile;
@@ -201,6 +203,7 @@ export function UsersManager({
         return;
       }
       const d = res.data as { user: Profile; trackers: TrackedFlight[] };
+      setModalTrackersPage(1);
       setDetailsModal(d);
     } finally {
       setBusyId(null);
@@ -609,42 +612,13 @@ export function UsersManager({
             </div>
 
             {/* Pagination Controls */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between border-t border-[var(--border)] pt-4 text-xs text-[var(--muted-foreground)]">
-                <span>
-                  Showing page <strong className="text-[var(--foreground)]">{page}</strong> of{" "}
-                  <strong className="text-[var(--foreground)]">{totalPages}</strong> ({total} users)
-                </span>
-                <div className="flex items-center gap-2">
-                  {page > 1 ? (
-                    <Link href={pageLink(page - 1)}>
-                      <Button variant="outline" size="sm" className="h-8 px-3 text-xs flex items-center gap-1">
-                        <ChevronLeft className="h-3.5 w-3.5" />
-                        Prev
-                      </Button>
-                    </Link>
-                  ) : (
-                    <Button variant="outline" size="sm" disabled className="h-8 px-3 text-xs opacity-50">
-                      <ChevronLeft className="h-3.5 w-3.5" />
-                      Prev
-                    </Button>
-                  )}
-                  {page < totalPages ? (
-                    <Link href={pageLink(page + 1)}>
-                      <Button variant="outline" size="sm" className="h-8 px-3 text-xs flex items-center gap-1">
-                        Next
-                        <ChevronRight className="h-3.5 w-3.5" />
-                      </Button>
-                    </Link>
-                  ) : (
-                    <Button variant="outline" size="sm" disabled className="h-8 px-3 text-xs opacity-50">
-                      Next
-                      <ChevronRight className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
-                </div>
-              </div>
-            )}
+            <PaginationBar
+              page={page}
+              pageSize={pageSize}
+              total={total}
+              createPageUrl={pageLink}
+              itemLabel="users"
+            />
           </>
         )}
       </div>
@@ -709,32 +683,46 @@ export function UsersManager({
                     This user has not configured any flight trackers yet.
                   </div>
                 ) : (
-                  detailsModal.trackers.map((t) => (
-                    <div
-                      key={t.id}
-                      className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--card)] p-3 text-xs"
-                    >
-                      <div>
-                        <div className="flex items-center gap-1.5 font-bold text-sm text-[var(--foreground)]">
-                          <span>{t.origin}</span>
-                          <span className="text-[var(--muted-foreground)] font-normal">→</span>
-                          <span>{t.destination}</span>
-                          <span className="text-xs font-normal text-[var(--muted-foreground)] ml-1">
-                            ({formatDateShort(t.departure_date)})
-                          </span>
+                  detailsModal.trackers
+                    .slice((modalTrackersPage - 1) * 5, modalTrackersPage * 5)
+                    .map((t) => (
+                      <div
+                        key={t.id}
+                        className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--card)] p-3 text-xs"
+                      >
+                        <div>
+                          <div className="flex items-center gap-1.5 font-bold text-sm text-[var(--foreground)]">
+                            <span>{t.origin}</span>
+                            <span className="text-[var(--muted-foreground)] font-normal">→</span>
+                            <span>{t.destination}</span>
+                            <span className="text-xs font-normal text-[var(--muted-foreground)] ml-1">
+                              ({formatDateShort(t.departure_date)})
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-[var(--muted-foreground)] mt-0.5">
+                            Target: <strong className="text-[var(--foreground)]">{formatCurrency(t.target_price, t.currency)}</strong> · Latest:{" "}
+                            <strong className="text-cyan-500 dark:text-cyan-400">{formatCurrency(t.last_seen_price, t.currency)}</strong>
+                          </p>
                         </div>
-                        <p className="text-[11px] text-[var(--muted-foreground)] mt-0.5">
-                          Target: <strong className="text-[var(--foreground)]">{formatCurrency(t.target_price, t.currency)}</strong> · Latest:{" "}
-                          <strong className="text-cyan-500 dark:text-cyan-400">{formatCurrency(t.last_seen_price, t.currency)}</strong>
-                        </p>
+                        <Badge variant={t.is_active ? "emerald" : "secondary"} dot={t.is_active}>
+                          {t.is_active ? "Active" : "Paused"}
+                        </Badge>
                       </div>
-                      <Badge variant={t.is_active ? "emerald" : "secondary"} dot={t.is_active}>
-                        {t.is_active ? "Active" : "Paused"}
-                      </Badge>
-                    </div>
-                  ))
+                    ))
                 )}
               </div>
+
+              {detailsModal.trackers.length > 5 && (
+                <div className="pt-2">
+                  <PaginationBar
+                    page={modalTrackersPage}
+                    pageSize={5}
+                    total={detailsModal.trackers.length}
+                    onPageChange={setModalTrackersPage}
+                    itemLabel="trackers"
+                  />
+                </div>
+              )}
             </div>
 
             <div className="flex justify-end pt-2 border-t border-[var(--border)]">

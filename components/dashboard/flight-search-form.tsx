@@ -27,6 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { PaginationBar } from "@/components/ui/pagination-bar";
 import { formatCurrency, formatDateShort } from "@/lib/utils";
 import {
   CABIN_CLASSES,
@@ -52,6 +53,31 @@ export function FlightSearchForm({
   const [checkingPrice, setCheckingPrice] = React.useState(false);
   const [directOnly, setDirectOnly] = React.useState(false);
   const [quote, setQuote] = React.useState<FlightPriceQuote | null>(null);
+  const [optionsPage, setOptionsPage] = React.useState(1);
+  const [optionsSort, setOptionsSort] = React.useState<"price" | "direct" | "airline">("price");
+  const OPTIONS_PAGE_SIZE = 5;
+
+  React.useEffect(() => {
+    setOptionsPage(1);
+  }, [quote]);
+
+  const sortedOptions = React.useMemo(() => {
+    if (!quote?.options) return [];
+    return [...quote.options].sort((a, b) => {
+      if (optionsSort === "price") return a.price - b.price;
+      if (optionsSort === "direct") {
+        if (a.isDirect && !b.isDirect) return -1;
+        if (!a.isDirect && b.isDirect) return 1;
+        return a.price - b.price;
+      }
+      return a.airline.localeCompare(b.airline);
+    });
+  }, [quote?.options, optionsSort]);
+
+  const pagedOptions = React.useMemo(() => {
+    const start = (optionsPage - 1) * OPTIONS_PAGE_SIZE;
+    return sortedOptions.slice(start, start + OPTIONS_PAGE_SIZE);
+  }, [sortedOptions, optionsPage]);
 
   const today = React.useMemo(() => new Date().toISOString().slice(0, 10), []);
 
@@ -482,51 +508,119 @@ export function FlightSearchForm({
               </div>
 
               {quote.options && quote.options.length > 0 ? (
-                <div className="grid gap-2.5 max-h-72 overflow-y-auto pr-1">
-                  {quote.options.map((opt, idx) => (
-                    <div
-                      key={idx}
-                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-[var(--border)] glass-surface-3 p-3.5 hover:border-sky-500/40 hover:shadow-xs transition-all"
-                    >
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-sm text-[var(--foreground)]">{opt.airline}</span>
-                          {opt.flightNumber && (
-                            <span className="font-mono text-xs text-[var(--muted-foreground)]">
-                              #{opt.flightNumber}
-                            </span>
+                <div className="space-y-3">
+                  {/* Sorting controls if options > 1 */}
+                  {sortedOptions.length > 1 && (
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                      <span className="text-[var(--muted-foreground)]">Sort offers by:</span>
+                      <div className="inline-flex rounded-lg border border-[var(--border)] p-0.5 glass-surface-3">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setOptionsSort("price");
+                            setOptionsPage(1);
+                          }}
+                          className={cn(
+                            "px-2.5 py-1 rounded-md font-medium transition-all text-xs cursor-pointer",
+                            optionsSort === "price"
+                              ? "bg-sky-500/20 text-sky-300 font-bold"
+                              : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
                           )}
-                          <Badge variant={opt.isDirect ? "success" : "secondary"}>
-                            {opt.isDirect ? "Non-Stop" : `${opt.transfers} stop(s)`}
-                          </Badge>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--muted-foreground)]">
-                          <span>Departs: <strong className="text-[var(--foreground)]">{formatDateShort(opt.departureAt)}</strong></span>
-                          <span className="flex items-center gap-1">
-                            <Store className="h-3 w-3" />
-                            Provider: <strong className="text-[var(--foreground)]">{opt.seller}</strong>
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-3 self-end sm:self-center">
-                        <div className="text-right">
-                          <span className="text-base sm:text-lg font-bold tabular-nums text-sky-400">
-                            {formatCurrency(opt.price, opt.currency)}
-                          </span>
-                        </div>
-                        <a
-                          href={opt.bookingUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 rounded-xl btn-glass-primary px-3.5 py-1.5 text-xs font-bold text-white shadow-xs transition-all"
                         >
-                          <span>Book</span>
-                          <ExternalLink className="h-3 w-3" />
-                        </a>
+                          Lowest Price
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setOptionsSort("direct");
+                            setOptionsPage(1);
+                          }}
+                          className={cn(
+                            "px-2.5 py-1 rounded-md font-medium transition-all text-xs cursor-pointer",
+                            optionsSort === "direct"
+                              ? "bg-sky-500/20 text-sky-300 font-bold"
+                              : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+                          )}
+                        >
+                          Non-Stop First
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setOptionsSort("airline");
+                            setOptionsPage(1);
+                          }}
+                          className={cn(
+                            "px-2.5 py-1 rounded-md font-medium transition-all text-xs cursor-pointer",
+                            optionsSort === "airline"
+                              ? "bg-sky-500/20 text-sky-300 font-bold"
+                              : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+                          )}
+                        >
+                          Airline
+                        </button>
                       </div>
                     </div>
-                  ))}
+                  )}
+
+                  <div className="grid gap-2.5">
+                    {pagedOptions.map((opt, idx) => (
+                      <div
+                        key={idx}
+                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-[var(--border)] glass-surface-3 p-3.5 hover:border-sky-500/40 hover:shadow-xs transition-all"
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-sm text-[var(--foreground)]">{opt.airline}</span>
+                            {opt.flightNumber && (
+                              <span className="font-mono text-xs text-[var(--muted-foreground)]">
+                                #{opt.flightNumber}
+                              </span>
+                            )}
+                            <Badge variant={opt.isDirect ? "success" : "secondary"}>
+                              {opt.isDirect ? "Non-Stop" : `${opt.transfers} stop(s)`}
+                            </Badge>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--muted-foreground)]">
+                            <span>
+                              Departs: <strong className="text-[var(--foreground)]">{formatDateShort(opt.departureAt)}</strong>
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Store className="h-3 w-3" />
+                              Provider: <strong className="text-[var(--foreground)]">{opt.seller}</strong>
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3 self-end sm:self-center">
+                          <div className="text-right">
+                            <span className="text-base sm:text-lg font-bold tabular-nums text-sky-400">
+                              {formatCurrency(opt.price, opt.currency)}
+                            </span>
+                          </div>
+                          <a
+                            href={opt.bookingUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 rounded-xl btn-glass-primary px-3.5 py-1.5 text-xs font-bold text-white shadow-xs transition-all"
+                          >
+                            <span>Book</span>
+                            <ExternalLink className="h-3 w-3" />
+                          </a>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {sortedOptions.length > OPTIONS_PAGE_SIZE && (
+                    <PaginationBar
+                      page={optionsPage}
+                      pageSize={OPTIONS_PAGE_SIZE}
+                      total={sortedOptions.length}
+                      onPageChange={setOptionsPage}
+                      itemLabel="offers"
+                    />
+                  )}
                 </div>
               ) : (
                 <p className="text-xs text-[var(--muted-foreground)]">

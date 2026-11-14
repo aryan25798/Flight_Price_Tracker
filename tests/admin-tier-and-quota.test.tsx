@@ -13,6 +13,7 @@ vi.mock("next/navigation", () => ({
     refresh: vi.fn(),
   }),
   usePathname: () => "/admin/users",
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 // Mock sonner toast

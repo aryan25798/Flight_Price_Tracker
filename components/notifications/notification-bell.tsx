@@ -173,7 +173,7 @@ export function NotificationBell({ initialUnreadCount }: NotificationBellProps) 
 
       {/* Floating Glassmorphism Popover Panel */}
       {open && (
-        <div className="fixed left-3 right-3 top-16 z-50 sm:static sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[400px] sm:max-w-[420px] max-h-[calc(100dvh-80px)] sm:max-h-[540px] flex flex-col rounded-2xl glass-floating border border-[var(--border)] shadow-[0_20px_50px_rgba(0,0,0,0.85)] p-0 text-[var(--foreground)] animate-in fade-in zoom-in-95 duration-150 overflow-hidden">
+        <div className="fixed inset-x-3 top-16 z-50 sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[400px] sm:max-w-[420px] max-h-[calc(100dvh-80px)] sm:max-h-[540px] flex flex-col rounded-2xl glass-floating border border-[var(--border)] shadow-[0_20px_50px_rgba(0,0,0,0.85)] p-0 text-[var(--foreground)] animate-in fade-in zoom-in-95 duration-150 overflow-hidden">
           {/* Header */}
           <div className="shrink-0 flex items-center justify-between border-b border-[var(--border)] px-4 py-3 bg-[var(--glass-surface-2)]/80 backdrop-blur-md">
             <div className="flex items-center gap-2">

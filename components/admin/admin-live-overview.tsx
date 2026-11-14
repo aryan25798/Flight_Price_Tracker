@@ -22,14 +22,26 @@ import { TriggerPollButton } from "@/components/admin/trigger-poll-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { PaginationBar } from "@/components/ui/pagination-bar";
 import { formatRelativeTime } from "@/lib/utils";
 
 interface AdminLiveOverviewProps {
   initialStats: AdminStats;
   initialRuns: PollingRunRow[];
+  chartRuns?: PollingRunRow[];
+  runsTotal?: number;
+  runsPage?: number;
+  runsPageSize?: number;
 }
 
-export function AdminLiveOverview({ initialStats, initialRuns }: AdminLiveOverviewProps) {
+export function AdminLiveOverview({
+  initialStats,
+  initialRuns,
+  chartRuns,
+  runsTotal,
+  runsPage = 1,
+  runsPageSize = 10,
+}: AdminLiveOverviewProps) {
   const [stats, setStats] = React.useState<AdminStats>(initialStats);
   const [recentRuns, setRecentRuns] = React.useState<PollingRunRow[]>(initialRuns);
   const [isRealtimeConnected, setIsRealtimeConnected] = React.useState(false);
@@ -268,7 +280,7 @@ export function AdminLiveOverview({ initialStats, initialRuns }: AdminLiveOvervi
           </CardDescription>
         </CardHeader>
         <CardContent className="p-4 sm:p-6">
-          <PollingRunsChart runs={recentRuns} />
+          <PollingRunsChart runs={chartRuns ?? recentRuns} />
         </CardContent>
       </Card>
 
@@ -342,6 +354,18 @@ export function AdminLiveOverview({ initialStats, initialRuns }: AdminLiveOvervi
               </tbody>
             </table>
           </div>
+
+          {runsTotal !== undefined && runsTotal > 0 && (
+            <div className="p-4 border-t border-[var(--border)]">
+              <PaginationBar
+                page={runsPage}
+                pageSize={runsPageSize}
+                total={runsTotal}
+                createPageUrl={(p) => `/admin?runsPage=${p}`}
+                itemLabel="runs"
+              />
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

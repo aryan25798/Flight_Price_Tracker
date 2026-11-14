@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { PaginationBar } from "@/components/ui/pagination-bar";
 
 interface AuditLogRow {
   id: string;
@@ -321,42 +322,13 @@ export function AuditLogsViewer({
           </div>
 
           {/* Pagination Controls */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between border-t border-[var(--border)] pt-4 text-xs text-[var(--muted-foreground)]">
-              <span>
-                Showing page <strong className="text-[var(--foreground)]">{page}</strong> of{" "}
-                <strong className="text-[var(--foreground)]">{totalPages}</strong> ({total} entries)
-              </span>
-              <div className="flex items-center gap-2">
-                {page > 1 ? (
-                  <Link href={pageLink(page - 1)}>
-                    <Button variant="outline" size="sm" className="h-8 px-3 text-xs flex items-center gap-1">
-                      <ChevronLeft className="h-3.5 w-3.5" />
-                      Prev
-                    </Button>
-                  </Link>
-                ) : (
-                  <Button variant="outline" size="sm" disabled className="h-8 px-3 text-xs opacity-50">
-                    <ChevronLeft className="h-3.5 w-3.5" />
-                    Prev
-                  </Button>
-                )}
-                {page < totalPages ? (
-                  <Link href={pageLink(page + 1)}>
-                    <Button variant="outline" size="sm" className="h-8 px-3 text-xs flex items-center gap-1">
-                      Next
-                      <ChevronRight className="h-3.5 w-3.5" />
-                    </Button>
-                  </Link>
-                ) : (
-                  <Button variant="outline" size="sm" disabled className="h-8 px-3 text-xs opacity-50">
-                    Next
-                    <ChevronRight className="h-3.5 w-3.5" />
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
+          <PaginationBar
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            createPageUrl={pageLink}
+            itemLabel="audit logs"
+          />
         </>
       )}
     </div>

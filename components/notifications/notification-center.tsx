@@ -23,6 +23,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { PaginationBar } from "@/components/ui/pagination-bar";
 import { formatCurrency, formatDateShort, formatRelativeTime } from "@/lib/utils";
 import {
   deleteNotificationAction,
@@ -382,47 +383,23 @@ export function NotificationCenter({
         </div>
       )}
 
-      {/* Pagination Controls */}
-      {totalPages > 1 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-[var(--border)]">
-          <p className="text-xs text-[var(--muted-foreground)] font-medium">
-            Showing {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} of {total} alerts
-          </p>
-
-          <div className="flex items-center gap-2">
-            {page > 1 ? (
-              <Link href={`/dashboard/notifications?page=${page - 1}&filter=${currentFilter}`}>
-                <Button variant="outline" size="sm" className="h-8 px-3 text-xs gap-1 font-semibold">
-                  <ChevronLeft className="h-3.5 w-3.5" />
-                  <span>Previous</span>
-                </Button>
-              </Link>
-            ) : (
-              <Button variant="outline" size="sm" disabled className="h-8 px-3 text-xs gap-1 opacity-50 font-semibold">
-                <ChevronLeft className="h-3.5 w-3.5" />
-                <span>Previous</span>
-              </Button>
-            )}
-
-            <span className="text-xs font-bold px-2 text-[var(--foreground)]">
-              {page} / {totalPages}
-            </span>
-
-            {page < totalPages ? (
-              <Link href={`/dashboard/notifications?page=${page + 1}&filter=${currentFilter}`}>
-                <Button variant="outline" size="sm" className="h-8 px-3 text-xs gap-1 font-semibold">
-                  <span>Next</span>
-                  <ChevronRight className="h-3.5 w-3.5" />
-                </Button>
-              </Link>
-            ) : (
-              <Button variant="outline" size="sm" disabled className="h-8 px-3 text-xs gap-1 opacity-50 font-semibold">
-                <span>Next</span>
-                <ChevronRight className="h-3.5 w-3.5" />
-              </Button>
-            )}
-          </div>
-        </div>
+      {/* Server-Side Pagination Bar */}
+      {total > 0 && (
+        <PaginationBar
+          page={page}
+          pageSize={pageSize}
+          total={total}
+          createPageUrl={(p) =>
+            `/dashboard/notifications?page=${p}&filter=${currentFilter}&pageSize=${pageSize}`
+          }
+          pageSizeOptions={[10, 25, 50]}
+          onPageSizeChange={(newSize) => {
+            router.push(
+              `/dashboard/notifications?page=1&filter=${currentFilter}&pageSize=${newSize}`,
+            );
+          }}
+          itemLabel="alerts"
+        />
       )}
     </div>
   );
