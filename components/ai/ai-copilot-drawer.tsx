@@ -313,9 +313,12 @@ export function AICopilotDrawer({
                   const proposal = (parsed.output || parsed.result) as ActionProposal;
                   foundProposals.push(proposal);
                 } else if (parsed.type === "error") {
-                  setErrorText(parsed.errorText || "AI processing error.");
+                  const errMsg = parsed.errorText && parsed.errorText !== "An error occurred."
+                    ? parsed.errorText
+                    : "The flight radar intelligence service is reconnecting. Please send your message again.";
+                  setErrorText(errMsg);
                   if (!assistantContent) {
-                    assistantContent = `⚠️ ${parsed.errorText || "AI request failed."}`;
+                    assistantContent = `⚠️ ${errMsg}`;
                   }
                 }
               } catch {}

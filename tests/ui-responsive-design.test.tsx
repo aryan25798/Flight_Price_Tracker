@@ -397,6 +397,10 @@ describe("UI Responsive Design & Mobile-First Component Suite", () => {
       minPrice: 6422,
       maxPrice: 6422,
       fetchedAt: "2026-11-14T12:00:00Z",
+      priceReliability: {
+        status: "CACHED_PRICE",
+        notice: "Test notice",
+      },
     };
 
     it("renders flight card with overnight +1 Day indicator and responsive layout classes", () => {
@@ -404,6 +408,8 @@ describe("UI Responsive Design & Mobile-First Component Suite", () => {
         <FlightSearchResults
           results={mockSnapshot}
           currency="INR"
+          loading={false}
+          activeSort="cheapest"
           onSelectExactFlight={vi.fn()}
           onFilterChange={vi.fn()}
           onSortChange={vi.fn()}
@@ -424,6 +430,8 @@ describe("UI Responsive Design & Mobile-First Component Suite", () => {
         <FlightSearchResults
           results={mockSnapshot}
           currency="INR"
+          loading={false}
+          activeSort="cheapest"
           onSelectExactFlight={vi.fn()}
           onFilterChange={vi.fn()}
           onSortChange={vi.fn()}

@@ -1,5 +1,6 @@
 import { fetchLiveFlightPrices, type FlightOption } from "./pricing-service";
 import { generateMultiSiteComparisonLinks } from "@/lib/flight-urls";
+import { AmadeusAdapter } from "./adapters/amadeus";
 import {
   calculateFlightTimeline,
   validateFlightMatchesRequestedDate,
@@ -269,8 +270,10 @@ export class FlightSearchService {
       priceReliability: {
         status: allOffers.length > 0 ? allOffers[0].priceStatus : "UNAVAILABLE",
         notice:
-          allOffers.length > 0
-            ? "Fares reflect recently indexed cached rates from Travelpayouts / Aviasales. For guaranteed live-seat booking, verify on airline or partner portals below."
+          allOffers.length > 1
+            ? "Fares reflect verified airline rates. For guaranteed live-seat checkout, compare across partner portals below."
+            : allOffers.length === 1
+            ? "Showing 1 cached low-fare snapshot from Travelpayouts. To check all 15+ live departures in real-time, compare across Google Flights, MakeMyTrip, or Skyscanner below, or configure an Amadeus API key in Settings for full real-time GDS flight search."
             : "No airline fares available for this exact date and route combination.",
       },
     };
@@ -280,16 +283,6 @@ export class FlightSearchService {
    * Queries provider adapters and aggregates results.
    */
   private static async queryAllProviders(query: FlightSearchQuery): Promise<NormalizedFlightOffer[]> {
-    const rawQuote = await fetchLiveFlightPrices({
-      origin: query.origin,
-      destination: query.destination,
-      departureDate: query.departureDate,
-      returnDate: query.returnDate || undefined,
-      tripType: query.tripType || "one_way",
-      currency: query.currency || "INR",
-      directOnly: query.directOnly || false,
-    });
-
     const comparisonSites = generateMultiSiteComparisonLinks({
       origin: query.origin,
       destination: query.destination,
@@ -302,9 +295,33 @@ export class FlightSearchService {
 
     const originInfo = getAirportDetails(query.origin);
     const destInfo = getAirportDetails(query.destination);
-    const totalPassengers = (query.adults || 1) + (query.children || 0) + (query.infants || 0);
-
     const offers: NormalizedFlightOffer[] = [];
+    const seenFingerprints = new Set<string>();
+
+    // 1. Query Amadeus GDS live flight offers if configured
+    if (AmadeusAdapter.isConfigured()) {
+      try {
+        const amadeusOffers = await AmadeusAdapter.searchFlights(query);
+        amadeusOffers.forEach((o) => {
+          o.comparisonSites = comparisonSites.map((s) => ({ name: s.name, url: s.url }));
+          offers.push(o);
+          seenFingerprints.add(`${o.airlineCode}_${o.flightNumber.replace(/\s+/g, "")}_${o.departureTime}`);
+        });
+      } catch (err) {
+        console.error("Amadeus search adapter error:", err);
+      }
+    }
+
+    // 2. Query Travelpayouts / Aviasales cached fare engine
+    const rawQuote = await fetchLiveFlightPrices({
+      origin: query.origin,
+      destination: query.destination,
+      departureDate: query.departureDate,
+      returnDate: query.returnDate || undefined,
+      tripType: query.tripType || "one_way",
+      currency: query.currency || "INR",
+      directOnly: query.directOnly || false,
+    });
 
     if (rawQuote && rawQuote.found && rawQuote.options && rawQuote.options.length > 0) {
       rawQuote.options.forEach((opt, index) => {
@@ -312,6 +329,12 @@ export class FlightSearchService {
         if (!validateFlightMatchesRequestedDate(opt.departureDateOnly, query.departureDate)) {
           return;
         }
+
+        const cleanKey = `${opt.airlineCode || "6E"}_${String(opt.flightNumber || index).replace(/\s+/g, "")}_${opt.departureTimeLocal}`;
+        if (seenFingerprints.has(cleanKey)) {
+          return;
+        }
+        seenFingerprints.add(cleanKey);
 
         const totalPrice = opt.price * (query.adults || 1);
         const stops = opt.isDirect ? 0 : 1;

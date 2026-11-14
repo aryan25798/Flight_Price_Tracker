@@ -13,8 +13,8 @@ export const AI_CONFIG = {
   providerName: "google",
 
   // Groq LPU Free Tier High-Speed Models
-  groqModel: "llama-3.3-70b-versatile",
-  groqFastModel: "llama-3.1-8b-instant",
+  groqModel: "openai/gpt-oss-120b",
+  groqFastModel: "openai/gpt-oss-20b",
   
   // Rate & Token Guardrails
   maxOutputTokens: 1024,
