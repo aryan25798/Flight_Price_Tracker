@@ -7,17 +7,21 @@
  */
 
 export const AI_CONFIG = {
-  // Primary model on Google AI Studio Free Tier
-  defaultModel: "gemini-3.5-flash",
-  fallbackModel: "gemini-3-flash-preview",
+  // Google AI Studio Production Flash Models
+  defaultModel: "gemini-3.5-flash-lite",
+  fallbackModel: "gemini-3.5-flash",
   providerName: "google",
+
+  // Groq LPU Free Tier High-Speed Models
+  groqModel: "llama-3.3-70b-versatile",
+  groqFastModel: "llama-3.1-8b-instant",
   
   // Rate & Token Guardrails
   maxOutputTokens: 1024,
   temperature: 0.2, // Low temperature for high factual grounding and deterministic tool selection
   requestTimeoutMs: 15_000,
   maxToolHopsPerTurn: 4,
-  maxHistoryMessages: 8,
+  maxHistoryMessages: 6, // Sliding window pruning: prevents token bloat and keeps TTFT fast
   
   // User Rate Limits
   rateLimits: {

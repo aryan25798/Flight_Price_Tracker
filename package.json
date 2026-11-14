@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.121",
+    "@ai-sdk/groq": "^4.0.84",
     "@ai-sdk/react": "^4.0.177",
     "@hookform/resolvers": "^5.0.1",
     "@supabase/ssr": "^0.6.1",

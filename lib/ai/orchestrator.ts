@@ -70,11 +70,13 @@ export async function orchestrateAIChat({
   // 6. Verify provider readiness
   if (!aiProvider.isConfigured()) {
     throw new Error(
-      "AeroDrop AI is not configured. Please supply a GEMINI_API_KEY in your environment configuration."
+      "AeroDrop AI is not configured. Please supply a GROQ_API_KEY or GEMINI_API_KEY in your environment configuration."
     );
   }
 
-  const model = aiProvider.getModel(AI_CONFIG.defaultModel);
+  const activeProvider = aiProvider.getActiveProvider();
+  const activeModelId = activeProvider === "groq" ? AI_CONFIG.groqModel : AI_CONFIG.defaultModel;
+  const model = aiProvider.getModel(activeModelId);
 
   // 7. Execute streaming inference with tool calling
   const startTime = Date.now();
@@ -91,8 +93,8 @@ export async function orchestrateAIChat({
       try {
         await supabase.from("ai_usage_logs").insert({
           user_id: user.id,
-          provider: AI_CONFIG.providerName,
-          model: AI_CONFIG.defaultModel,
+          provider: activeProvider,
+          model: activeModelId,
           prompt_tokens: usage?.inputTokens ?? 0,
           completion_tokens: usage?.outputTokens ?? 0,
           latency_ms: latencyMs,
