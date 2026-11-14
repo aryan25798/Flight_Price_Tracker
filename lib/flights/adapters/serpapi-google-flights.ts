@@ -184,6 +184,7 @@ export class SerpApiGoogleFlightsAdapter {
             arrivalTime: segArr.time,
             durationMinutes: legDuration,
             durationFormatted: `${Math.floor(legDuration / 60)}h ${legDuration % 60}m`,
+            aircraft: leg.airplane,
           };
         });
 
@@ -200,6 +201,7 @@ export class SerpApiGoogleFlightsAdapter {
           airlineCode,
           airlineLogo: primaryLogo,
           flightNumber,
+          aircraft: firstLeg.airplane,
           originAirport: query.origin,
           originCity: originInfo?.city || query.origin,
           destinationAirport: query.destination,

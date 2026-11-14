@@ -433,20 +433,30 @@ export class FlightSearchService {
         });
 
         if (oagInstances.length > 0) {
+          const extractDigits = (fn: string | number) => {
+            if (!fn) return "";
+            const stripped = String(fn).replace(/^[A-Za-z0-9]{2}\s+/, "").trim();
+            return stripped.replace(/\D/g, "") || stripped;
+          };
+
           const oagMap = new Map<string, (typeof oagInstances)[0]>();
           for (const inst of oagInstances) {
-            const cleanNum = inst.flightNumber.replace(/\D/g, "");
+            const cleanNum = extractDigits(inst.flightNumber);
             oagMap.set(`${inst.carrierIata}_${cleanNum}`, inst);
             if (!oagMap.has(cleanNum)) {
               oagMap.set(cleanNum, inst);
             }
+            if (inst.departureTimeLocal) {
+              oagMap.set(`${inst.carrierIata}_time_${inst.departureTimeLocal}`, inst);
+            }
           }
 
           for (const offer of offers) {
-            const cleanNum = offer.flightNumber.replace(/\D/g, "");
+            const cleanNum = extractDigits(offer.flightNumber);
             const match =
               oagMap.get(`${offer.airlineCode}_${cleanNum}`) ||
-              oagMap.get(cleanNum);
+              oagMap.get(cleanNum) ||
+              (offer.departureTime ? oagMap.get(`${offer.airlineCode}_time_${offer.departureTime}`) : undefined);
 
             if (match) {
               if (match.departureTerminal) offer.terminal = match.departureTerminal;
