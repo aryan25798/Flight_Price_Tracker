@@ -44,11 +44,19 @@ export function PwaPushCard() {
   const [testing, setTesting] = React.useState<boolean>(false);
   const [deferredPrompt, setDeferredPrompt] = React.useState<any>(null);
   const [isInstalled, setIsInstalled] = React.useState<boolean>(false);
+  const [isBrave, setIsBrave] = React.useState<boolean>(false);
 
   React.useEffect(() => {
     if (typeof window !== "undefined" && "serviceWorker" in navigator && "PushManager" in window) {
       setIsSupported(true);
       setPermission(Notification.permission);
+
+      // Detect Brave Browser
+      if ((navigator as any).brave && typeof (navigator as any).brave.isBrave === "function") {
+        (navigator as any).brave.isBrave().then((brave: boolean) => {
+          if (brave) setIsBrave(true);
+        }).catch(() => {});
+      }
 
       // Check if already subscribed
       navigator.serviceWorker.ready.then(async (registration) => {
@@ -149,9 +157,12 @@ export function PwaPushCard() {
     } catch (err: unknown) {
       console.error("Push subscription error:", err);
       const msg = err instanceof Error ? err.message : "";
-      if (msg.toLowerCase().includes("push service error")) {
+      if (
+        msg.toLowerCase().includes("push service error") ||
+        msg.toLowerCase().includes("registration failed")
+      ) {
         toast.error(
-          "Push blocked by browser. If using Brave, enable 'Use Google services for push messaging' in brave://settings/privacy, or try Chrome/Edge.",
+          "Push service blocked by browser. If using Brave, enable 'Use Google services for push messaging' in brave://settings/privacy, or try Chrome/Edge.",
           { duration: 8000 },
         );
       } else {
@@ -242,6 +253,20 @@ export function PwaPushCard() {
               <p className="text-xs text-[var(--muted-foreground)] leading-relaxed">
                 Connect your browser to receive native OS notifications for 4-hour radar updates and flash price drops.
               </p>
+              {isBrave && !isSubscribed && (
+                <div className="text-[11px] text-amber-300/90 bg-amber-500/10 border border-amber-500/20 rounded-xl p-2.5 leading-relaxed space-y-1">
+                  <p className="font-semibold text-amber-200 flex items-center gap-1.5">
+                    <Info className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                    Brave Browser Setup
+                  </p>
+                  <p>
+                    Brave blocks push notifications by default. Enable{" "}
+                    <span className="font-medium text-amber-100">&quot;Use Google services for push messaging&quot;</span> in{" "}
+                    <code className="text-amber-200 bg-amber-950/40 px-1 py-0.5 rounded font-mono text-[10px]">brave://settings/privacy</code>{" "}
+                    to receive lock-screen alerts.
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="pt-2 flex items-center gap-2 flex-wrap">
