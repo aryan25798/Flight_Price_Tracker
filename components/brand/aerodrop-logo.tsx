@@ -24,6 +24,7 @@ interface AeroDropLogoProps {
   href?: string;
   className?: string;
   subtitle?: string;
+  hideSubtitleOnMobile?: boolean;
 }
 
 const sizeConfig = {
@@ -40,6 +41,7 @@ export function AeroDropLogo({
   href,
   className,
   subtitle = "FLIGHT RADAR",
+  hideSubtitleOnMobile = false,
 }: AeroDropLogoProps) {
   const cfg = sizeConfig[size];
 
@@ -92,6 +94,7 @@ export function AeroDropLogo({
                 "font-semibold tracking-[0.2em] uppercase mt-1",
                 cfg.sub,
                 theme === "light" ? "text-slate-500" : "text-slate-400",
+                hideSubtitleOnMobile && "hidden sm:inline-block",
               )}
             >
               {subtitle}

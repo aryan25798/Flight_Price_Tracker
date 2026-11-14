@@ -33,8 +33,9 @@ export default async function HomePage() {
     <div className="min-h-screen flex flex-col ambient-night-mesh selection:bg-sky-500/25 overflow-x-hidden">
       {/* Top Navigation Bar */}
       <header className="sticky top-0 z-40 border-b border-[var(--border)] bg-[#060913]/90 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <AeroDropLogo variant="full" size="md" href="/" />
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-3 sm:px-6 lg:px-8">
+          <AeroDropLogo variant="full" size="sm" href="/" hideSubtitleOnMobile className="sm:hidden" />
+          <AeroDropLogo variant="full" size="md" href="/" className="hidden sm:inline-flex" />
 
           <nav className="hidden md:flex items-center gap-7 text-xs font-semibold text-[var(--muted-foreground)]">
             <a href="#how-it-works" className="hover:text-[var(--foreground)] transition-colors">
@@ -51,25 +52,26 @@ export default async function HomePage() {
             </a>
           </nav>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3">
             <ThemeToggle />
             {user ? (
               <Link href="/dashboard">
-                <Button className="gap-2 font-bold shadow-md bg-sky-600 hover:bg-sky-500 text-white min-h-[40px] px-4 rounded-xl transition-all">
+                <Button className="gap-1.5 font-bold shadow-md bg-sky-600 hover:bg-sky-500 text-white min-h-[36px] sm:min-h-[40px] px-3 sm:px-4 text-xs sm:text-sm rounded-xl transition-all">
                   <span>Open Radar</span>
-                  <ArrowRight className="h-4 w-4" />
+                  <ArrowRight className="h-3.5 w-3.5" />
                 </Button>
               </Link>
             ) : (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 <Link href="/login">
-                  <Button variant="ghost" size="sm" className="font-semibold text-xs sm:text-sm text-[var(--foreground)] hover:bg-white/5 rounded-xl">
+                  <Button variant="ghost" size="sm" className="font-semibold text-xs sm:text-sm text-[var(--foreground)] hover:bg-white/5 rounded-xl px-2.5 sm:px-3 h-9">
                     Sign In
                   </Button>
                 </Link>
                 <Link href="/signup">
-                  <Button size="sm" className="font-bold shadow-md text-xs sm:text-sm bg-sky-600 hover:bg-sky-500 text-white rounded-xl px-4 min-h-[38px] transition-all">
-                    Get Started Free
+                  <Button size="sm" className="font-bold shadow-md text-xs sm:text-sm bg-sky-600 hover:bg-sky-500 text-white rounded-xl px-2.5 sm:px-4 h-9 sm:min-h-[38px] transition-all whitespace-nowrap">
+                    <span className="hidden sm:inline">Get Started Free</span>
+                    <span className="sm:hidden">Get Started</span>
                   </Button>
                 </Link>
               </div>
@@ -82,7 +84,7 @@ export default async function HomePage() {
         {/* =========================================================================
             HERO SECTION — PHOTOGRAPHY-LED WITH ATMOSPHERIC SKY LIGHTING
             ========================================================================= */}
-        <section className="relative overflow-hidden pt-14 pb-20 sm:pt-24 sm:pb-32 lg:pt-28 lg:pb-36 text-center">
+        <section className="relative overflow-hidden pt-12 pb-16 sm:pt-24 sm:pb-32 lg:pt-28 lg:pb-36 text-center">
           {/* Authentic High-Altitude Aviation Photography Layer */}
           <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden select-none">
             <Image
@@ -101,35 +103,36 @@ export default async function HomePage() {
           </div>
 
           <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="max-w-3xl mx-auto space-y-6">
+            <div className="max-w-3xl mx-auto space-y-5 sm:space-y-6">
               {/* Refined Glass Badge */}
-              <div className="inline-flex items-center gap-2.5 rounded-full border border-sky-400/25 bg-slate-900/80 px-4 py-1.5 text-xs font-semibold text-sky-300 shadow-sm backdrop-blur-md">
-                <Radio className="h-3.5 w-3.5 text-sky-400 animate-pulse" />
-                <span>Autonomous 4-Hour Flight Radar · Triple-Channel Alerts</span>
+              <div className="inline-flex items-center gap-2 rounded-full border border-sky-400/25 bg-slate-900/80 px-3.5 sm:px-4 py-1.5 text-[11px] sm:text-xs font-semibold text-sky-300 shadow-sm backdrop-blur-md max-w-full">
+                <Radio className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-sky-400 animate-pulse shrink-0" />
+                <span className="hidden sm:inline">Autonomous 4-Hour Flight Radar · Triple-Channel Alerts</span>
+                <span className="sm:hidden">Autonomous Flight Radar · Live Alerts</span>
               </div>
 
               {/* Headline Typography */}
-              <h1 className="text-3xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl text-[var(--foreground)] leading-[1.12]">
+              <h1 className="text-2xl xs:text-3xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl text-[var(--foreground)] leading-[1.15]">
                 Precision Flight Price Tracking for{" "}
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-blue-400 to-indigo-300">
                   Modern Travelers.
                 </span>
               </h1>
 
-              <p className="mx-auto max-w-2xl text-sm sm:text-base lg:text-lg text-slate-300 leading-relaxed">
+              <p className="mx-auto max-w-2xl text-xs sm:text-base lg:text-lg text-slate-300 leading-relaxed px-1">
                 Configure your alert threshold for any global route. AeroDrop monitors airline fares around the clock, tracks 30-day price volatility, and pings you on Telegram, Email &amp; Browser Push the instant fares drop.
               </p>
 
               {/* Action Buttons */}
-              <div className="flex flex-wrap items-center justify-center gap-3.5 pt-2">
-                <Link href={user ? "/dashboard" : "/signup"}>
-                  <Button size="lg" className="min-h-[48px] px-8 gap-2 text-base font-bold shadow-xl bg-sky-600 hover:bg-sky-500 text-white rounded-xl shadow-sky-950/50 transition-all hover:-translate-y-0.5">
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 sm:gap-3.5 pt-2 w-full max-w-xs sm:max-w-none mx-auto">
+                <Link href={user ? "/dashboard" : "/signup"} className="w-full sm:w-auto">
+                  <Button size="lg" className="w-full sm:w-auto min-h-[44px] sm:min-h-[48px] px-6 sm:px-8 gap-2 text-sm sm:text-base font-bold shadow-xl bg-sky-600 hover:bg-sky-500 text-white rounded-xl shadow-sky-950/50 transition-all hover:-translate-y-0.5">
                     <span>{user ? "Open Flight Radar" : "Start Tracking Routes Free"}</span>
                     <ArrowRight className="h-4 w-4" />
                   </Button>
                 </Link>
-                <Link href="/login">
-                  <Button size="lg" variant="outline" className="min-h-[48px] px-6 text-base font-semibold border-white/15 bg-slate-900/60 hover:bg-white/10 text-white rounded-xl backdrop-blur-md transition-all">
+                <Link href="/login" className="w-full sm:w-auto">
+                  <Button size="lg" variant="outline" className="w-full sm:w-auto min-h-[44px] sm:min-h-[48px] px-5 sm:px-6 text-sm sm:text-base font-semibold border-white/15 bg-slate-900/60 hover:bg-white/10 text-white rounded-xl backdrop-blur-md transition-all">
                     Existing User Sign In
                   </Button>
                 </Link>
@@ -137,21 +140,21 @@ export default async function HomePage() {
             </div>
 
             {/* Interactive Live Route Radar Preview Simulator */}
-            <div className="relative z-10 mx-auto mt-12 sm:mt-16 max-w-4xl">
-              <div className="glass-surface-1 rounded-3xl border border-[var(--border)] p-5 sm:p-7 shadow-2xl text-left bg-slate-900/90 backdrop-blur-xl">
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] pb-4">
-                  <div className="flex items-center gap-2.5">
-                    <span className="flex h-3 w-3 rounded-full bg-emerald-400 animate-ping" />
-                    <span className="text-xs font-bold uppercase tracking-wider text-[var(--foreground)]">
+            <div className="relative z-10 mx-auto mt-10 sm:mt-16 max-w-4xl">
+              <div className="glass-surface-1 rounded-2xl sm:rounded-3xl border border-[var(--border)] p-4 sm:p-7 shadow-2xl text-left bg-slate-900/90 backdrop-blur-xl">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-[var(--border)] pb-3.5 sm:pb-4">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-400 animate-ping shrink-0" />
+                    <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-[var(--foreground)]">
                       Live Flight Price Drop Simulation
                     </span>
                   </div>
-                  <Badge variant="success" dot className="text-xs font-semibold py-1 px-3">
+                  <Badge variant="success" dot className="text-[11px] sm:text-xs font-semibold py-0.5 sm:py-1 px-2.5 sm:px-3 self-start sm:self-auto">
                     Instant Flash Drop (-24%)
                   </Badge>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-5 items-center">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 sm:gap-4 pt-4 sm:pt-5 items-center">
                   {/* Route Segment */}
                   <div className="space-y-1">
                     <div className="flex items-center gap-3 font-mono text-2xl font-black text-[var(--foreground)]">
@@ -423,8 +426,8 @@ export default async function HomePage() {
               Create your first route tracker in 30 seconds. Connect your Telegram account and let AeroDrop do the heavy lifting.
             </p>
             <div className="pt-2">
-              <Link href={user ? "/dashboard" : "/signup"}>
-                <Button size="lg" className="min-h-[50px] px-9 gap-2 text-base font-bold shadow-xl bg-sky-600 hover:bg-sky-500 text-white rounded-xl shadow-sky-950/50 transition-all hover:-translate-y-0.5">
+              <Link href={user ? "/dashboard" : "/signup"} className="inline-block w-full sm:w-auto">
+                <Button size="lg" className="w-full sm:w-auto min-h-[46px] sm:min-h-[50px] px-6 sm:px-9 gap-2 text-sm sm:text-base font-bold shadow-xl bg-sky-600 hover:bg-sky-500 text-white rounded-xl shadow-sky-950/50 transition-all hover:-translate-y-0.5">
                   <span>{user ? "Open Flight Radar" : "Start Tracking Now — 100% Free"}</span>
                   <ArrowRight className="h-4 w-4" />
                 </Button>
