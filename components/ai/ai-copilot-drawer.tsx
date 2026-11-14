@@ -72,8 +72,34 @@ export function AICopilotDrawer({
     },
   ]);
 
+  const [mounted, setMounted] = React.useState(false);
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+
+  // Restore conversation memory from sessionStorage on client mount
+  React.useEffect(() => {
+    setMounted(true);
+    try {
+      const storageKey = `aerodrop_chat_context_${scope}`;
+      const saved = sessionStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMessages(parsed);
+        }
+      }
+    } catch {}
+  }, [scope]);
+
+  // Persist conversation memory into sessionStorage as turns progress
+  React.useEffect(() => {
+    if (mounted && messages.length > 0) {
+      try {
+        const storageKey = `aerodrop_chat_context_${scope}`;
+        sessionStorage.setItem(storageKey, JSON.stringify(messages));
+      } catch {}
+    }
+  }, [messages, mounted, scope]);
 
   // Auto-scroll on new message
   React.useEffect(() => {
@@ -280,6 +306,10 @@ export function AICopilotDrawer({
   }
 
   function clearHistory() {
+    try {
+      const storageKey = `aerodrop_chat_context_${scope}`;
+      sessionStorage.removeItem(storageKey);
+    } catch {}
     setMessages([
       {
         id: "cleared-1",

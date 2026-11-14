@@ -21,7 +21,7 @@ export const AI_CONFIG = {
   temperature: 0.2, // Low temperature for high factual grounding and deterministic tool selection
   requestTimeoutMs: 15_000,
   maxToolHopsPerTurn: 4,
-  maxHistoryMessages: 6, // Sliding window pruning: prevents token bloat and keeps TTFT fast
+  maxHistoryMessages: 8, // Sliding window context: maintains multi-turn memory without token bloat
   
   // User Rate Limits
   rateLimits: {
