@@ -18,9 +18,15 @@ export async function createTrackerAction(rawInput: unknown): Promise<ActionResu
 
   const parsed = CreateTrackerSchema.safeParse(rawInput);
   if (!parsed.success) {
+    const firstIssue = parsed.error.issues[0];
+    const fieldName = firstIssue?.path?.join(".") || "input";
+    const msg =
+      firstIssue?.message && firstIssue.message !== "Invalid input"
+        ? firstIssue.message
+        : `Invalid parameter for ${fieldName}`;
     return {
       ok: false,
-      message: parsed.error.issues[0]?.message ?? "Invalid flight search parameters",
+      message: msg,
     };
   }
 

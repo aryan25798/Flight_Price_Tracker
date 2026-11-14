@@ -54,23 +54,37 @@ export function AIActionCard({
           destination: string;
           departureDate: string;
           returnDate?: string | null;
-          tripType: "one_way" | "round_trip";
-          currency: string;
-          targetPrice: number;
+          tripType?: "one_way" | "round_trip" | "one-way" | "round-trip";
+          currency?: string;
+          targetPrice: number | string;
+          adults?: number;
+          children?: number;
+          infants?: number;
+          cabinClass?: "economy" | "premium_economy" | "business" | "first";
         };
 
+        const tripType =
+          d.tripType === "round_trip" || d.tripType === "round-trip"
+            ? "round_trip"
+            : "one_way";
+
+        const cleanPrice =
+          typeof d.targetPrice === "number"
+            ? d.targetPrice
+            : Number(String(d.targetPrice || "0").replace(/[^0-9.]/g, ""));
+
         const res = await createTrackerAction({
-          origin: d.origin,
-          destination: d.destination,
+          origin: (d.origin || "").trim().toUpperCase(),
+          destination: (d.destination || "").trim().toUpperCase(),
           departureDate: d.departureDate,
-          returnDate: d.returnDate,
-          tripType: d.tripType,
-          adults: 1,
-          children: 0,
-          infants: 0,
-          cabinClass: "economy",
-          currency: d.currency,
-          targetPrice: d.targetPrice,
+          returnDate: tripType === "round_trip" && d.returnDate ? d.returnDate : undefined,
+          tripType,
+          adults: d.adults ?? 1,
+          children: d.children ?? 0,
+          infants: d.infants ?? 0,
+          cabinClass: d.cabinClass || "economy",
+          currency: (d.currency || "INR").trim().toUpperCase(),
+          targetPrice: cleanPrice,
         });
 
         if (res.ok) {

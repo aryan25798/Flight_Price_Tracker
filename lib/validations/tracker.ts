@@ -20,8 +20,9 @@ export const CreateTrackerSchema = z
       .regex(/^\d{4}-\d{2}-\d{2}$/, "Valid departure date required"),
     returnDate: z
       .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Valid return date required")
       .optional()
+      .nullable()
       .or(z.literal("")),
     tripType: z.enum(["one_way", "round_trip"]),
     adults: z.coerce.number().int().min(1).max(9),

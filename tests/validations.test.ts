@@ -33,6 +33,31 @@ describe("Flight Tracker Zod Validations", () => {
     }
   });
 
+  it("accepts one-way trackers with returnDate as null, undefined, or empty", () => {
+    const parsedNull = CreateTrackerSchema.safeParse({
+      origin: "del",
+      destination: "pat",
+      departureDate: futureDate(2),
+      returnDate: null,
+      tripType: "one_way",
+      adults: 1,
+      children: 0,
+      infants: 0,
+      cabinClass: "economy",
+      currency: "INR",
+      targetPrice: 15000,
+    });
+
+    expect(parsedNull.success).toBe(true);
+    if (parsedNull.success) {
+      expect(parsedNull.data.origin).toBe("DEL");
+      expect(parsedNull.data.destination).toBe("PAT");
+      expect(parsedNull.data.tripType).toBe("one_way");
+      expect(parsedNull.data.currency).toBe("INR");
+      expect(parsedNull.data.returnDate).toBeNull();
+    }
+  });
+
   it("rejects identical origin and destination", () => {
     const parsed = CreateTrackerSchema.safeParse({
       origin: "DEL",
