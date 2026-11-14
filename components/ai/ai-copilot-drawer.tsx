@@ -24,6 +24,7 @@ import {
   User,
   X,
 } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AIActionCard, type ActionProposal } from "./ai-action-card";
@@ -292,27 +293,34 @@ export function AICopilotDrawer({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200">
       {/* Click outside to close on mobile backdrop */}
       <div className="flex-1 hidden sm:block" onClick={onClose} aria-hidden="true" />
 
       {/* Slide-over Flyout Panel */}
-      <div className="flex flex-col w-full sm:w-[440px] sm:max-w-[460px] h-full glass-surface-1 border-l border-[var(--border)] shadow-2xl animate-in slide-in-from-right duration-200 overflow-hidden">
+      <div className="flex flex-col w-full sm:w-[460px] md:w-[480px] h-full bg-[#080d1a]/95 backdrop-blur-2xl border-l border-white/10 shadow-[-10px_0_40px_rgba(0,0,0,0.6)] animate-in slide-in-from-right duration-200 overflow-hidden">
         {/* Drawer Header */}
-        <div className="shrink-0 flex items-center justify-between border-b border-[var(--border)] px-4 py-3 bg-[var(--glass-surface-2)]/80 backdrop-blur-md">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-sky-500/15 text-sky-400 border border-sky-500/30">
+        <div className="shrink-0 flex items-center justify-between border-b border-white/10 px-4 py-3.5 bg-slate-950/80 backdrop-blur-xl">
+          <div className="flex items-center gap-3">
+            <div className="relative flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-tr from-sky-500/20 to-blue-600/30 border border-sky-400/40 text-sky-400 shadow-[0_0_15px_rgba(56,189,248,0.25)]">
               <Sparkles className="h-4 w-4" />
+              <span className="absolute -bottom-0.5 -right-0.5 flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
+              </span>
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="font-extrabold text-sm text-[var(--foreground)] tracking-tight">
+                <h3 className="font-extrabold text-sm text-white tracking-tight">
                   AeroDrop Copilot
+                </h3>
+                <span className="text-[9px] font-mono font-bold text-sky-400 bg-sky-950/70 border border-sky-500/30 px-1.5 py-0.5 rounded-full">
+                  2.0
                 </span>
-                <span className="inline-flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
               </div>
-              <p className="text-[10px] text-[var(--muted-foreground)]">
-                {scope === "admin" ? "Administrative Telemetry Engine" : "Grounded Flight Intelligence"}
+              <p className="text-[10px] text-slate-400 flex items-center gap-1">
+                <span className="inline-block w-1 h-1 rounded-full bg-emerald-400" />
+                {scope === "admin" ? "Administrative Telemetry Deck" : "Live Flight Radar Intelligence"}
               </p>
             </div>
           </div>
@@ -323,9 +331,9 @@ export function AICopilotDrawer({
                 type="button"
                 onClick={() => setScope(scope === "user" ? "admin" : "user")}
                 className={cn(
-                  "px-2 py-1 rounded-lg text-[10px] font-bold border transition-all cursor-pointer",
+                  "px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all cursor-pointer",
                   scope === "admin"
-                    ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
+                    ? "bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-[0_0_10px_rgba(245,158,11,0.2)]"
                     : "bg-sky-500/15 text-sky-300 border-sky-500/30 hover:bg-sky-500/25"
                 )}
                 title="Switch AI Context Scope"
@@ -339,7 +347,7 @@ export function AICopilotDrawer({
               size="icon"
               onClick={clearHistory}
               title="Clear Conversation"
-              className="h-8 w-8 text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+              className="h-8 w-8 text-slate-400 hover:text-white hover:bg-white/5 rounded-lg"
             >
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
@@ -349,7 +357,7 @@ export function AICopilotDrawer({
               size="icon"
               onClick={onClose}
               title="Close Copilot"
-              className="h-8 w-8 text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+              className="h-8 w-8 text-slate-400 hover:text-white hover:bg-white/5 rounded-lg"
             >
               <X className="h-4 w-4" />
             </Button>
@@ -357,70 +365,119 @@ export function AICopilotDrawer({
         </div>
 
         {/* Message Stream Body */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs sm:text-sm">
-          {messages.map((m) => (
-            <div
-              key={m.id}
-              className={cn(
-                "flex flex-col gap-1.5 max-w-[90%]",
-                m.role === "user" ? "ml-auto items-end" : "mr-auto items-start"
-              )}
-            >
-              <div className="flex items-center gap-1 text-[10px] text-[var(--muted-foreground)] px-1">
-                {m.role === "user" ? (
-                  <>
-                    <span>You</span>
-                    <User className="h-3 w-3" />
-                  </>
-                ) : (
-                  <>
-                    <Bot className="h-3 w-3 text-sky-400" />
-                    <span className="font-semibold text-sky-400">AeroDrop Copilot</span>
-                  </>
-                )}
+        <div className="flex-1 overflow-y-auto p-4 space-y-5 text-xs sm:text-sm">
+          {messages.map((m) =>
+            m.role === "user" ? (
+              <div key={m.id} className="flex flex-col gap-1 items-end ml-auto max-w-[85%] group">
+                <div className="bg-gradient-to-r from-blue-600 to-sky-600 text-white rounded-2xl rounded-tr-xs px-4 py-2.5 shadow-[0_4px_16px_rgba(37,99,235,0.25)] border border-blue-400/30 text-[13px] font-medium leading-relaxed break-words">
+                  {m.content}
+                </div>
+                <span className="text-[10px] text-slate-500 pr-1">You</span>
               </div>
-
-              <div
-                className={cn(
-                  "rounded-2xl p-3.5 shadow-sm leading-relaxed whitespace-pre-wrap break-words",
-                  m.role === "user"
-                    ? "bg-sky-500 text-slate-950 font-medium rounded-tr-xs"
-                    : "glass-surface-3 border border-[var(--border)] text-[var(--foreground)] rounded-tl-xs"
-                )}
-              >
-                {m.content ? (
-                  m.content
-                ) : m.role === "assistant" && loading ? (
-                  <div className="flex items-center gap-1.5 py-1 text-slate-400">
-                    <span className="w-1.5 h-1.5 bg-sky-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
-                    <span className="w-1.5 h-1.5 bg-sky-400 rounded-full animate-bounce [animation-delay:-0.15s]" />
-                    <span className="w-1.5 h-1.5 bg-sky-400 rounded-full animate-bounce" />
-                    <span className="text-[11px] text-slate-400 ml-1">Analyzing flight intelligence...</span>
+            ) : (
+              <div key={m.id} className="flex gap-2.5 items-start mr-auto max-w-[94%]">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500/20 to-blue-600/10 border border-sky-400/30 text-sky-400 shadow-[0_0_12px_rgba(56,189,248,0.15)] mt-0.5">
+                  <Sparkles className="h-3.5 w-3.5" />
+                </div>
+                <div className="flex flex-col gap-1 flex-1 min-w-0">
+                  <div className="flex items-center gap-2 px-1">
+                    <span className="text-[11px] font-bold text-slate-300">AeroDrop Copilot</span>
+                    <span className="text-[9px] font-mono text-sky-400/90 bg-sky-950/60 px-1.5 py-0.5 rounded border border-sky-500/20">
+                      Grounded
+                    </span>
                   </div>
-                ) : (
-                  <span className="text-slate-400 italic">No response received.</span>
-                )}
 
-                {/* Structured Interactive Action Proposals */}
-                {m.proposals && m.proposals.length > 0 && (
-                  <div className="mt-2 space-y-2">
-                    {m.proposals.map((prop, pIdx) => (
-                      <AIActionCard
-                        key={pIdx}
-                        proposal={prop}
-                        onResolved={() => router.refresh()}
-                      />
-                    ))}
+                  <div className="rounded-2xl rounded-tl-xs p-4 bg-slate-900/90 border border-white/10 text-[13px] leading-relaxed shadow-[0_8px_32px_rgba(0,0,0,0.36)] text-slate-200 break-words">
+                    {m.content ? (
+                      <div className="prose prose-invert max-w-none text-slate-200 text-[13px] leading-relaxed">
+                        <ReactMarkdown
+                          components={{
+                            p: ({ children }) => (
+                              <p className="mb-2.5 last:mb-0 leading-relaxed text-slate-200 font-normal">
+                                {children}
+                              </p>
+                            ),
+                            strong: ({ children }) => (
+                              <strong className="font-semibold text-white tracking-wide">
+                                {children}
+                              </strong>
+                            ),
+                            em: ({ children }) => (
+                              <em className="text-slate-300 italic">{children}</em>
+                            ),
+                            ul: ({ children }) => (
+                              <ul className="my-2.5 pl-4 space-y-1.5 list-disc marker:text-sky-400">
+                                {children}
+                              </ul>
+                            ),
+                            ol: ({ children }) => (
+                              <ol className="my-2.5 pl-4 space-y-1.5 list-decimal marker:text-sky-400">
+                                {children}
+                              </ol>
+                            ),
+                            li: ({ children }) => (
+                              <li className="text-[13px] text-slate-200 pl-0.5 leading-relaxed">
+                                {children}
+                              </li>
+                            ),
+                            code: ({ children }) => (
+                              <code className="font-mono text-[11px] bg-sky-950/70 text-sky-300 px-1.5 py-0.5 rounded border border-sky-500/25">
+                                {children}
+                              </code>
+                            ),
+                            h1: ({ children }) => (
+                              <h3 className="font-bold text-sm text-white mt-3 mb-1.5">{children}</h3>
+                            ),
+                            h2: ({ children }) => (
+                              <h4 className="font-bold text-sm text-white mt-3 mb-1.5">{children}</h4>
+                            ),
+                            h3: ({ children }) => (
+                              <h5 className="font-semibold text-xs text-sky-300 mt-2 mb-1">{children}</h5>
+                            ),
+                            blockquote: ({ children }) => (
+                              <blockquote className="border-l-2 border-sky-500/40 pl-3 my-2 text-slate-400 text-xs italic">
+                                {children}
+                              </blockquote>
+                            ),
+                          }}
+                        >
+                          {m.content}
+                        </ReactMarkdown>
+                      </div>
+                    ) : m.role === "assistant" && loading ? (
+                      <div className="flex items-center gap-2 py-1 text-slate-400 text-xs">
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75" />
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-sky-400" />
+                        </span>
+                        <span className="text-[12px] text-slate-400">Consulting live flight radar &amp; database...</span>
+                      </div>
+                    ) : (
+                      <span className="text-slate-400 italic text-xs">No response received.</span>
+                    )}
+
+                    {/* Structured Interactive Action Proposals */}
+                    {m.proposals && m.proposals.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-white/10 space-y-2">
+                        {m.proposals.map((prop, pIdx) => (
+                          <AIActionCard
+                            key={pIdx}
+                            proposal={prop}
+                            onResolved={() => router.refresh()}
+                          />
+                        ))}
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          )}
 
           {loading && (
-            <div className="flex items-center gap-2 rounded-2xl glass-surface-3 border border-[var(--border)] p-3 text-xs text-[var(--muted-foreground)] mr-auto">
-              <Loader2 className="h-3.5 w-3.5 animate-spin text-sky-400" />
-              <span>Analyzing flight radar telemetry & querying database tools...</span>
+            <div className="flex items-center gap-2.5 rounded-2xl bg-slate-900/60 border border-white/10 p-3 text-xs text-slate-400 mr-auto max-w-[90%]">
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-sky-400 shrink-0" />
+              <span className="truncate">Analyzing flight radar telemetry &amp; querying database tools...</span>
             </div>
           )}
 
@@ -429,67 +486,74 @@ export function AICopilotDrawer({
 
         {/* Quick Suggestions Chips */}
         {messages.length <= 2 && (
-          <div className="shrink-0 px-4 py-2 border-t border-[var(--border)]/60 bg-[var(--glass-surface-2)]/40">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted-foreground)] block mb-1.5">
-              Suggested Prompts:
+          <div className="shrink-0 px-4 py-3 border-t border-white/10 bg-slate-950/60 space-y-2">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+              Suggested Radar Prompts:
             </span>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-2">
               {quickPrompts.map((q, idx) => (
                 <button
                   key={idx}
                   type="button"
                   onClick={() => handleSendMessage(q)}
-                  className="rounded-lg border border-[var(--border)] glass-surface-3 px-2.5 py-1 text-[11px] text-[var(--foreground)] hover:border-sky-500/50 hover:bg-sky-500/10 cursor-pointer transition-all"
+                  className="rounded-xl border border-white/10 bg-slate-900/70 hover:bg-slate-800 hover:border-sky-500/40 px-3 py-1.5 text-xs text-slate-300 hover:text-white transition-all cursor-pointer flex items-center gap-1.5 shadow-xs"
                 >
-                  {q}
+                  <Sparkles className="h-3 w-3 text-sky-400 shrink-0" />
+                  <span>{q}</span>
                 </button>
               ))}
             </div>
           </div>
         )}
 
-        {/* Input Footer */}
-        <div className="shrink-0 p-3.5 border-t border-[var(--border)] bg-[var(--glass-surface-2)]/80 backdrop-blur-md">
+        {/* Input Control Deck */}
+        <div className="shrink-0 p-3.5 border-t border-white/10 bg-slate-950/90 backdrop-blur-xl">
           <form
             onSubmit={(e) => {
               e.preventDefault();
               handleSendMessage();
             }}
-            className="flex items-end gap-2"
+            className="rounded-2xl border border-white/10 focus-within:border-sky-500/50 focus-within:ring-2 focus-within:ring-sky-500/20 bg-slate-900/80 p-2.5 transition-all shadow-inner flex flex-col gap-2"
           >
-            <div className="relative flex-1">
-              <textarea
-                ref={textareaRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder={
-                  scope === "admin"
-                    ? "Ask about system health, crons, users, or API errors..."
-                    : "Ask about your flights, target prices, or 'Track DEL to LHR'..."
-                }
-                rows={1}
-                className="w-full resize-none rounded-xl border border-[var(--border)] glass-surface-3 px-3.5 py-2.5 text-xs text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:ring-1 focus:ring-sky-500 min-h-[40px] max-h-32"
-              />
+            <textarea
+              ref={textareaRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={
+                scope === "admin"
+                  ? "Ask about system health, crons, users, or API errors..."
+                  : "Ask about your flights, target prices, or 'Track DEL to LHR'..."
+              }
+              rows={2}
+              className="w-full resize-none bg-transparent px-1.5 py-0.5 text-xs sm:text-[13px] text-white placeholder:text-slate-500 focus:outline-none min-h-[44px] max-h-32 leading-relaxed"
+            />
+            <div className="flex items-center justify-between pt-1.5 border-t border-white/5">
+              <span className="text-[10px] text-slate-500 flex items-center gap-1">
+                <kbd className="font-mono bg-slate-800 px-1 py-0.5 rounded text-[9px] text-slate-400 border border-slate-700">↵ Enter</kbd> to send
+              </span>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={!input.trim() || loading}
+                className="h-8 px-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-md gap-1.5 transition-all cursor-pointer disabled:opacity-30 disabled:bg-slate-800"
+              >
+                {loading ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <>
+                    <span>Send</span>
+                    <Send className="h-3 w-3" />
+                  </>
+                )}
+              </Button>
             </div>
-            <Button
-              type="submit"
-              size="icon"
-              disabled={!input.trim() || loading}
-              className="h-10 w-10 shrink-0 rounded-xl bg-sky-500 text-slate-950 hover:bg-sky-400 font-bold shadow-md cursor-pointer disabled:opacity-40"
-              title="Send Message"
-            >
-              {loading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-            </Button>
           </form>
 
-          <p className="mt-2 text-center text-[10px] text-[var(--muted-foreground)] opacity-70">
-            AeroDrop AI 2.0 · Strictly grounded in verified database tools & RLS policies
-          </p>
+          <div className="mt-2.5 flex items-center justify-center gap-1.5 text-[10px] text-slate-500">
+            <Shield className="h-3 w-3 text-sky-400/80" />
+            <span>Grounded strictly in verified database tools &amp; RLS policies</span>
+          </div>
         </div>
       </div>
     </div>
