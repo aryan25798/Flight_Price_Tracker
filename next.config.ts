@@ -34,6 +34,18 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   compress: true,
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "www.gstatic.com",
+      },
+      {
+        protocol: "https",
+        hostname: "pics.avs.io",
+      },
+    ],
+  },
   experimental: {
     optimizePackageImports: ["lucide-react", "recharts"],
   },

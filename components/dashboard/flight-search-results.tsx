@@ -29,6 +29,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AirlineLogo } from "@/components/ui/airline-logo";
 import { formatCurrency, cn } from "@/lib/utils";
 import type { NormalizedFlightOffer, SearchResultSnapshot, FlightSearchQuery } from "@/lib/flights/search-service";
 import type { SupportedCurrency } from "@/types/database";
@@ -158,6 +159,8 @@ export function FlightSearchResults({
     Boolean(activeFilters?.airlines?.length) ||
     Boolean(activeFilters?.depTimeSlot?.length) ||
     Boolean(activeFilters?.maxPrice && activeFilters.maxPrice < maxPrice);
+
+  const [expandedOffers, setExpandedOffers] = React.useState<Record<string, boolean>>({});
 
   function handleToggleStop(stopCount: number) {
     const current = activeFilters?.stops || [];
@@ -327,6 +330,7 @@ export function FlightSearchResults({
                           : "glass-surface-2 text-slate-400 border-[var(--border)] hover:text-white"
                       )}
                     >
+                      <AirlineLogo code={airline.code} name={airline.name} size="xs" />
                       <span>{airline.name}</span>
                       <span className="text-[10px] text-sky-400 font-mono">
                         {formatCurrency(airline.minPrice, currency)}
@@ -472,16 +476,12 @@ export function FlightSearchResults({
                 <div className="grid grid-cols-1 md:grid-cols-[200px_1fr_200px] items-center gap-4 py-1">
                   {/* Airline & Flight Identity */}
                   <div className="flex items-center gap-3">
-                    <div
-                      className={cn(
-                        "flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border font-bold text-sm shadow-xs",
-                        airlineBadge.bg,
-                        airlineBadge.text,
-                        airlineBadge.border
-                      )}
-                    >
-                      {offer.airlineCode}
-                    </div>
+                    <AirlineLogo
+                      code={offer.airlineCode}
+                      name={offer.airline}
+                      logoUrl={offer.airlineLogo}
+                      size="md"
+                    />
                     <div className="space-y-0.5 min-w-0">
                       <p className="font-extrabold text-sm text-[var(--foreground)] truncate">
                         {offer.airline}
@@ -581,6 +581,63 @@ export function FlightSearchResults({
                     </div>
                   </div>
                 </div>
+
+                {/* Connecting Segments Breakdown Accordion */}
+                {offer.segments && offer.segments.length > 1 && (
+                  <div className="pt-2 border-t border-[var(--border)]/40">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setExpandedOffers((prev) => ({ ...prev, [offer.id]: !prev[offer.id] }))
+                      }
+                      className="text-[11px] text-sky-400 hover:text-sky-300 font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <AirlineLogo code={offer.segments[0].airlineCode} size="xs" />
+                      <span>
+                        {expandedOffers[offer.id]
+                          ? "Hide connecting flight breakdown"
+                          : `View detailed flight breakdown (${offer.stopsLabel} via ${offer.segments[0].destination})`}
+                      </span>
+                      <ChevronDown
+                        className={cn(
+                          "h-3 w-3 transition-transform",
+                          expandedOffers[offer.id] && "rotate-180"
+                        )}
+                      />
+                    </button>
+
+                    {expandedOffers[offer.id] && (
+                      <div className="mt-2.5 p-3 rounded-xl bg-slate-950/40 border border-[var(--border)] space-y-2 text-xs">
+                        {offer.segments.map((seg, sIdx) => (
+                          <div
+                            key={sIdx}
+                            className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/60 pb-2 last:border-b-0 last:pb-0"
+                          >
+                            <div className="flex items-center gap-2">
+                              <AirlineLogo
+                                code={seg.airlineCode}
+                                name={seg.airline}
+                                logoUrl={seg.airlineLogo}
+                                size="xs"
+                              />
+                              <div>
+                                <p className="font-semibold text-white">
+                                  {seg.airline} · {seg.flightNumber}
+                                </p>
+                                <p className="text-[10px] text-slate-400">
+                                  {seg.origin} ({seg.departureTime}) → {seg.destination} ({seg.arrivalTime})
+                                </p>
+                              </div>
+                            </div>
+                            <span className="text-[10px] font-mono text-slate-400">
+                              {seg.durationFormatted}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Bottom Verified Comparison Portals Pill Strip */}
                 <div className="border-t border-[var(--border)]/70 pt-2.5 flex flex-wrap items-center justify-between gap-2 text-xs">

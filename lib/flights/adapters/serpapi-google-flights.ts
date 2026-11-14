@@ -168,9 +168,11 @@ export class SerpApiGoogleFlightsAdapter {
           const segArr = parseSerpApiDateTime(leg.arrival_airport?.time, segDep.date);
           const legDuration = leg.duration || Math.round(totalDuration / flights.length);
 
+          const legCode = this.deriveAirlineCode(leg.airline, leg.flight_number);
           return {
             airline: leg.airline || airlineName,
-            airlineCode: this.deriveAirlineCode(leg.airline, leg.flight_number),
+            airlineCode: legCode,
+            airlineLogo: leg.airline_logo || `https://www.gstatic.com/flights/airline_logos/70px/${legCode}.png`,
             flightNumber: leg.flight_number || flightNumber,
             origin: leg.departure_airport?.id || query.origin,
             originName: leg.departure_airport?.name,
@@ -189,11 +191,14 @@ export class SerpApiGoogleFlightsAdapter {
         const baggageInfo =
           firstLeg.extensions?.find((e) => /bag|cabin|luggage/i.test(e)) || "15 kg Check-in, 7 kg Cabin";
 
+        const primaryLogo = firstLeg.airline_logo || `https://www.gstatic.com/flights/airline_logos/70px/${airlineCode}.png`;
+
         offers.push({
           id: `serp_${fingerprint}_${idx}`,
           itineraryFingerprint: fingerprint,
           airline: airlineName,
           airlineCode,
+          airlineLogo: primaryLogo,
           flightNumber,
           originAirport: query.origin,
           originCity: originInfo?.city || query.origin,

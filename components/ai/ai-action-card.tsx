@@ -5,6 +5,7 @@ import { Check, Loader2, Plane, ShieldAlert, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { AirlineLogo } from "@/components/ui/airline-logo";
 import { createTrackerAction, deleteTrackerAction } from "@/app/dashboard/actions";
 import { adminActionDispatch } from "@/app/admin/actions";
 import { resolveAirportCode } from "@/lib/flights/airport-resolver";
@@ -168,10 +169,17 @@ export function AIActionCard({
           {Boolean(proposal.details.flightNumber) && (
             <div className="col-span-2 rounded-lg bg-sky-950/60 border border-sky-500/20 px-2.5 py-1.5 flex items-center justify-between text-[11px]">
               <span className="text-slate-400">Target Flight:</span>
-              <span className="font-mono font-bold text-sky-300">
-                {String(proposal.details.airlineName || "")} #{String(proposal.details.flightNumber)}
-                {proposal.details.departureTime ? ` (${String(proposal.details.departureTime)} dep)` : ""}
-              </span>
+              <div className="flex items-center gap-1.5">
+                <AirlineLogo
+                  code={String(proposal.details.airlineCode || proposal.details.flightNumber || "").slice(0, 2)}
+                  name={String(proposal.details.airlineName || "")}
+                  size="xs"
+                />
+                <span className="font-mono font-bold text-sky-300">
+                  {String(proposal.details.airlineName || "")} #{String(proposal.details.flightNumber)}
+                  {proposal.details.departureTime ? ` (${String(proposal.details.departureTime)} dep)` : ""}
+                </span>
+              </div>
             </div>
           )}
           <div>

@@ -31,6 +31,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PaginationBar } from "@/components/ui/pagination-bar";
+import { AirlineLogo } from "@/components/ui/airline-logo";
 import { formatCurrency, formatDateShort, formatRelativeTime } from "@/lib/utils";
 import { generateMultiSiteComparisonLinks } from "@/lib/flight-urls";
 import type { TrackedFlight } from "@/types/database";
@@ -256,8 +257,9 @@ export function TrackersTable({
                       {/* Flight Details Row */}
                       <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--muted-foreground)]">
                         {t.flight_number && (
-                          <span className="font-mono text-[11px] font-bold text-sky-400 bg-sky-950/60 px-1.5 py-0.5 rounded border border-sky-500/30">
-                            {t.airline_name ? `${t.airline_name} ` : ""}{t.flight_number}
+                          <span className="font-mono text-[11px] font-bold text-sky-400 bg-sky-950/60 px-1.5 py-0.5 rounded border border-sky-500/30 inline-flex items-center gap-1.5">
+                            <AirlineLogo code={t.airline_code || t.flight_number.slice(0, 2)} name={t.airline_name || undefined} size="xs" />
+                            <span>{t.airline_name ? `${t.airline_name} ` : ""}{t.flight_number}</span>
                           </span>
                         )}
                         <span className="inline-flex items-center gap-1 font-semibold text-[var(--foreground)]">
@@ -403,8 +405,9 @@ export function TrackersTable({
                               <ArrowRight className="h-3.5 w-3.5 text-sky-400" />
                               <span className="text-sm">{t.destination}</span>
                               {t.flight_number && (
-                                <span className="text-[10px] font-mono font-bold text-sky-400 bg-sky-950/60 px-1.5 py-0.5 rounded border border-sky-500/30">
-                                  {t.airline_name ? `${t.airline_name} ` : ""}{t.flight_number}
+                                <span className="text-[10px] font-mono font-bold text-sky-400 bg-sky-950/60 px-1.5 py-0.5 rounded border border-sky-500/30 inline-flex items-center gap-1.5">
+                                  <AirlineLogo code={t.airline_code || t.flight_number.slice(0, 2)} name={t.airline_name || undefined} size="xs" />
+                                  <span>{t.airline_name ? `${t.airline_name} ` : ""}{t.flight_number}</span>
                                 </span>
                               )}
                             </div>

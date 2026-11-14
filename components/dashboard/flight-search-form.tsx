@@ -45,6 +45,7 @@ import {
 import { createTrackerAction } from "@/app/dashboard/actions";
 import { checkCurrentPriceAction, type FlightPriceQuote } from "@/app/dashboard/price-action";
 import { FlightSearchResults } from "@/components/dashboard/flight-search-results";
+import { AirlineLogo } from "@/components/ui/airline-logo";
 import type { SearchResultSnapshot, NormalizedFlightOffer, FlightSearchQuery } from "@/lib/flights/search-service";
 import { cn } from "@/lib/utils";
 import type { UserQuota } from "@/types/database";
@@ -581,9 +582,12 @@ export function FlightSearchForm({
           {selectedOffer && (
             <div className="rounded-2xl border border-sky-500/40 bg-sky-950/40 p-3.5 text-xs flex items-center justify-between gap-3 animate-in fade-in shadow-md">
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-sky-500/20 text-sky-400 border border-sky-400/30">
-                  <Plane className="h-4 w-4" />
-                </div>
+                <AirlineLogo
+                  code={selectedOffer.airlineCode}
+                  name={selectedOffer.airline}
+                  logoUrl={selectedOffer.airlineLogo}
+                  size="sm"
+                />
                 <div className="space-y-0.5 truncate">
                   <p className="font-extrabold text-white truncate">
                     Tracking Exact Flight: {selectedOffer.airline} {selectedOffer.flightNumber}

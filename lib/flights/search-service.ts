@@ -41,6 +41,7 @@ export interface FlightSearchQuery {
 export interface FlightSegment {
   airline: string;
   airlineCode: string;
+  airlineLogo?: string;
   flightNumber: string;
   origin: string;
   originName?: string;
@@ -59,6 +60,7 @@ export interface NormalizedFlightOffer {
   itineraryFingerprint: string;
   airline: string;
   airlineCode: string;
+  airlineLogo?: string;
   flightNumber: string;
   originAirport: string;
   originCity: string;
@@ -358,6 +360,7 @@ export class FlightSearchService {
         const segment: FlightSegment = {
           airline: opt.airline,
           airlineCode: opt.airlineCode || "6E",
+          airlineLogo: `https://www.gstatic.com/flights/airline_logos/70px/${(opt.airlineCode || "6E").toUpperCase()}.png`,
           flightNumber: opt.flightNumber || `${opt.airlineCode || "6E"} ${index + 101}`,
           origin: query.origin,
           originName: originInfo?.name,
@@ -376,6 +379,7 @@ export class FlightSearchService {
           itineraryFingerprint: fingerprint,
           airline: opt.airline,
           airlineCode: opt.airlineCode || "6E",
+          airlineLogo: `https://www.gstatic.com/flights/airline_logos/70px/${(opt.airlineCode || "6E").toUpperCase()}.png`,
           flightNumber: opt.flightNumber || `${opt.airlineCode || "6E"} ${index + 101}`,
           originAirport: query.origin,
           originCity: originInfo?.city || query.origin,
