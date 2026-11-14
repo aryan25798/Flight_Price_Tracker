@@ -2,7 +2,7 @@ import { tool } from "ai";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Profile } from "@/types/database";
-import { checkCurrentPriceAction } from "@/app/dashboard/price-action";
+import { fetchLiveFlightPrices } from "@/lib/flights/pricing-service";
 import { formatCurrency } from "@/lib/utils";
 
 export interface UserToolContext {
@@ -95,7 +95,7 @@ export function buildUserTools(ctx: UserToolContext) {
         currency: "INR" | "USD" | "EUR" | "GBP" | "AED" | "SGD";
         directOnly: boolean;
       }) => {
-        const quote = await checkCurrentPriceAction({
+        const quote = await fetchLiveFlightPrices({
           origin,
           destination,
           departureDate,
@@ -105,10 +105,16 @@ export function buildUserTools(ctx: UserToolContext) {
           directOnly,
         });
 
-        if (!quote) {
+        if (!quote || !quote.found) {
           return {
             found: false,
-            message: `No live airfares found for ${origin} → ${destination} on ${departureDate}.`,
+            message:
+              quote?.message ||
+              `No live airfares found for ${origin} → ${destination} on ${departureDate}.`,
+            comparisonSites: quote?.comparisonSites?.map((s) => ({
+              name: s.name,
+              url: s.url,
+            })),
           };
         }
 
