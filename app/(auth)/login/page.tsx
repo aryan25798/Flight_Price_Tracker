@@ -202,6 +202,16 @@ function LoginForm() {
             Sign up
           </Link>
         </p>
+
+        <div className="mt-4 pt-3 border-t border-[var(--border)] flex items-center justify-center gap-3 text-[11px] text-[var(--muted-foreground)]">
+          <Link href="/terms" className="hover:text-white transition-colors">
+            Terms
+          </Link>
+          <span>·</span>
+          <Link href="/privacy" className="hover:text-white transition-colors">
+            Privacy
+          </Link>
+        </div>
       </CardContent>
     </Card>
   );

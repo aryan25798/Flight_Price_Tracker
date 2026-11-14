@@ -192,7 +192,18 @@ function SignupForm() {
 
         <GoogleAuthButton mode="signup" next={safeNext} />
 
-        <p className="mt-3 text-center text-xs text-[var(--muted-foreground)]">
+        <p className="mt-3 text-center text-[11px] text-[var(--muted-foreground)] leading-relaxed">
+          By creating an account, you agree to our{" "}
+          <Link href="/terms" className="text-sky-400 hover:underline font-medium">
+            Terms of Service
+          </Link>{" "}
+          and{" "}
+          <Link href="/privacy" className="text-sky-400 hover:underline font-medium">
+            Privacy Policy
+          </Link>.
+        </p>
+
+        <p className="mt-2 text-center text-xs text-[var(--muted-foreground)]">
           Already have an account?{" "}
           <Link
             href={safeNext !== "/dashboard" ? `/login?next=${encodeURIComponent(safeNext)}` : "/login"}

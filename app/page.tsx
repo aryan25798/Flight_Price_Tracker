@@ -439,10 +439,16 @@ export default async function HomePage() {
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
           <AeroDropLogo variant="full" size="sm" href="/" />
           
-          <div className="flex items-center gap-5 text-slate-400">
-            <span>Next.js 15 SSR</span>
+          <div className="flex flex-wrap items-center justify-center gap-4 text-slate-400">
+            <Link href="/privacy" className="hover:text-white transition-colors">
+              Privacy Policy
+            </Link>
             <span>·</span>
-            <span>Supabase PostgreSQL</span>
+            <Link href="/terms" className="hover:text-white transition-colors">
+              Terms of Service
+            </Link>
+            <span>·</span>
+            <span>Next.js 15 SSR</span>
             <span>·</span>
             <span>Telegram Bot API</span>
             <span>·</span>

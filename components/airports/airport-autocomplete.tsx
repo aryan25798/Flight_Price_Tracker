@@ -139,6 +139,7 @@ export function AirportAutocomplete({
           type="text"
           role="combobox"
           aria-expanded={open}
+          aria-controls={`${id || "airport"}-listbox`}
           aria-autocomplete="list"
           value={query}
           placeholder={placeholder}

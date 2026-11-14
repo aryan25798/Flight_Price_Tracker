@@ -1,6 +1,7 @@
 import { createClient, getAuthenticatedProfile } from "@/lib/supabase/server";
 import { TelegramCard } from "@/components/dashboard/telegram-card";
 import { PwaPushCard } from "@/components/pwa/pwa-push-card";
+import { DeleteAccountCard } from "@/components/dashboard/delete-account-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDateShort } from "@/lib/utils";
 
@@ -55,6 +56,8 @@ export default async function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      <DeleteAccountCard userEmail={profile.email} />
     </div>
   );
 }
