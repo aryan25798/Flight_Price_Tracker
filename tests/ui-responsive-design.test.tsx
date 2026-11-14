@@ -4,10 +4,12 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { TrackersTable } from "@/components/dashboard/trackers-table";
 import { PriceHistoryChart } from "@/components/charts/price-history-chart";
 import { TelegramCard } from "@/components/dashboard/telegram-card";
+import { FlightSearchResults } from "@/components/dashboard/flight-search-results";
 import { Dialog } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { generateMultiSiteComparisonLinks } from "@/lib/flight-urls";
 import type { TrackedFlight, PriceHistoryPoint } from "@/types/database";
+import type { SearchResultSnapshot, NormalizedFlightOffer } from "@/lib/flights/search-service";
 
 // Mock next/navigation
 vi.mock("next/navigation", () => ({
@@ -331,6 +333,112 @@ describe("UI Responsive Design & Mobile-First Component Suite", () => {
 
       const easemytrip = sites.find((s) => s.id === "easemytrip");
       expect(easemytrip?.url).toContain("easemytrip.com");
+    });
+  });
+
+  describe("Responsive FlightSearchResults & Comparison Links", () => {
+    const mockOffer: NormalizedFlightOffer = {
+      id: "resp_offer_1",
+      itineraryFingerprint: "DEL_PAT_2026-11-20_6E_6245_0620",
+      airline: "IndiGo",
+      airlineCode: "6E",
+      flightNumber: "6E 6245",
+      originAirport: "DEL",
+      originCity: "New Delhi",
+      destinationAirport: "PAT",
+      destinationCity: "Patna",
+      departureDate: "2026-11-20",
+      departureTime: "06:20",
+      arrivalDate: "2026-11-20",
+      arrivalTime: "08:05",
+      durationMinutes: 105,
+      durationFormatted: "1h 45m",
+      stops: 0,
+      stopsLabel: "Non-stop",
+      segments: [],
+      price: 6422,
+      pricePerAdult: 6422,
+      formattedPrice: "₹6,422",
+      currency: "INR",
+      priceStatus: "CACHED_PRICE",
+      priceStatusLabel: "Indexed Fare",
+      cabinClass: "economy",
+      baggageAllowance: "15 kg Check-in, 7 kg Cabin",
+      seller: "IndiGo Direct",
+      bookingUrl: "https://goindigo.in",
+      comparisonSites: [
+        { name: "Google Flights", url: "https://www.google.com/travel/flights?q=Flights%20to%20PAT" },
+        { name: "MakeMyTrip", url: "https://www.makemytrip.com/flight/search?itinerary=DEL-PAT" },
+      ],
+      isOvernight: true,
+      dayDifference: 1,
+      score: 95,
+      isBestOverall: true,
+    };
+
+    const mockSnapshot: SearchResultSnapshot = {
+      sessionId: "sess_DEL_PAT_2026-11-20",
+      query: {
+        origin: "DEL",
+        destination: "PAT",
+        departureDate: "2026-11-20",
+        tripType: "one_way",
+        adults: 1,
+        cabinClass: "economy",
+        currency: "INR",
+      },
+      totalOffers: 1,
+      filteredCount: 1,
+      page: 1,
+      pageSize: 10,
+      totalPages: 1,
+      offers: [mockOffer],
+      availableAirlines: [{ code: "6E", name: "IndiGo", minPrice: 6422 }],
+      minPrice: 6422,
+      maxPrice: 6422,
+      fetchedAt: "2026-11-14T12:00:00Z",
+    };
+
+    it("renders flight card with overnight +1 Day indicator and responsive layout classes", () => {
+      render(
+        <FlightSearchResults
+          results={mockSnapshot}
+          currency="INR"
+          onSelectExactFlight={vi.fn()}
+          onFilterChange={vi.fn()}
+          onSortChange={vi.fn()}
+          onPageChange={vi.fn()}
+          onPageSizeChange={vi.fn()}
+        />
+      );
+
+      expect(screen.getByText("IndiGo")).toBeInTheDocument();
+      expect(screen.getByText("6E 6245")).toBeInTheDocument();
+      expect(screen.getByText("+1 Day")).toBeInTheDocument();
+      expect(screen.getByText("Best Overall")).toBeInTheDocument();
+      expect(screen.getByText("₹6,422")).toBeInTheDocument();
+    });
+
+    it("verifies all comparison portal pills open in new tabs with rel=noopener noreferrer", () => {
+      render(
+        <FlightSearchResults
+          results={mockSnapshot}
+          currency="INR"
+          onSelectExactFlight={vi.fn()}
+          onFilterChange={vi.fn()}
+          onSortChange={vi.fn()}
+          onPageChange={vi.fn()}
+          onPageSizeChange={vi.fn()}
+        />
+      );
+
+      const googleLink = screen.getByRole("link", { name: /Google Flights/i });
+      expect(googleLink).toHaveAttribute("target", "_blank");
+      expect(googleLink).toHaveAttribute("rel", "noopener noreferrer");
+
+      const mmtLink = screen.getByRole("link", { name: /MakeMyTrip/i });
+      expect(mmtLink).toHaveAttribute("target", "_blank");
+      expect(mmtLink).toHaveAttribute("rel", "noopener noreferrer");
     });
   });
 });
