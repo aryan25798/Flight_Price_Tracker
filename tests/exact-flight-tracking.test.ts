@@ -25,7 +25,7 @@ describe("AeroDrop Exact Flight Tracking & Search Session Suite (Phase 2)", () =
     if (res.success) {
       expect(res.data.origin).toBe("DEL");
       expect(res.data.destination).toBe("PAT");
-      expect(res.data.trackingMode).toBe("route");
+      expect(res.data.trackingMode ?? "route").toBe("route");
     }
   });
 

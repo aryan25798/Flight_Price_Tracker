@@ -110,6 +110,7 @@ export function FlightSearchForm({
       cabinClass: "economy",
       currency: "INR",
       targetPrice: 5000,
+      trackingMode: "route",
     },
   });
 

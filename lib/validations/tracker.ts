@@ -35,7 +35,7 @@ export const CreateTrackerSchema = z
       .number()
       .positive("Target price must be greater than 0")
       .max(10_000_000, "Target price is too high"),
-    trackingMode: z.enum(["route", "exact_flight"]).optional().default("route"),
+    trackingMode: z.enum(["route", "exact_flight"]).optional(),
     flightNumber: z.string().trim().optional().nullable().or(z.literal("")),
     airlineCode: z.string().trim().optional().nullable().or(z.literal("")),
     airlineName: z.string().trim().optional().nullable().or(z.literal("")),
