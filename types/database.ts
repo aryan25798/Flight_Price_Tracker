@@ -125,3 +125,50 @@ export interface NotificationLog {
   } | null;
 }
 
+export type AIScope = "user" | "admin";
+export type AIMessageRole = "user" | "assistant" | "system" | "tool";
+
+export interface AIConversation {
+  id: string;
+  user_id: string;
+  title: string;
+  scope: AIScope;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AIMessage {
+  id: string;
+  conversation_id: string;
+  user_id: string;
+  role: AIMessageRole;
+  content: string;
+  tool_calls?: Record<string, unknown>[] | null;
+  tool_results?: Record<string, unknown>[] | null;
+  created_at: string;
+}
+
+export interface AIUsageLog {
+  id: string;
+  user_id: string;
+  provider: string;
+  model: string;
+  prompt_tokens: number;
+  completion_tokens: number;
+  tool_execution_count: number;
+  latency_ms: number;
+  status: "success" | "error" | "rate_limited" | "quota_exhausted";
+  error_message?: string | null;
+  created_at: string;
+}
+
+export interface AIQuotaResult {
+  allowed: boolean;
+  reason?: "kill_switch_active" | "account_banned" | "quota_exceeded";
+  message?: string;
+  used_today?: number;
+  remaining?: number;
+  limit?: number;
+}
+
+

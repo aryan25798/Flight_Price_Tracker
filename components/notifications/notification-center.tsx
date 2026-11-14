@@ -141,17 +141,37 @@ export function NotificationCenter({
             </p>
           </div>
 
-          {unreadCount > 0 && (
-            <Button
-              onClick={handleMarkAllAsRead}
-              variant="outline"
-              size="sm"
-              className="gap-2 font-bold text-xs sm:text-sm shadow-xs self-start md:self-auto cursor-pointer border-sky-500/30 hover:border-sky-500/60"
+          <div className="flex items-center gap-2 self-start md:self-auto flex-wrap">
+            <button
+              type="button"
+              onClick={() => {
+                window.dispatchEvent(
+                  new CustomEvent("aerodrop:open-copilot", {
+                    detail: {
+                      prompt: `Summarize my recent flight price alerts and notifications. Which routes had the biggest price drops, and are there any critical action items for me?`,
+                    },
+                  })
+                );
+              }}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-sky-500/30 bg-sky-500/10 hover:bg-sky-500/20 px-3 py-1.5 text-xs font-bold text-sky-300 transition-all cursor-pointer shadow-2xs"
+              title="Ask AI to summarize your price notifications"
             >
-              <CheckCheck className="h-4 w-4 text-sky-400" />
-              <span>Mark All as Read</span>
-            </Button>
-          )}
+              <Sparkles className="h-3.5 w-3.5 text-sky-400" />
+              <span>Summarize Alerts with AI</span>
+            </button>
+
+            {unreadCount > 0 && (
+              <Button
+                onClick={handleMarkAllAsRead}
+                variant="outline"
+                size="sm"
+                className="gap-2 font-bold text-xs sm:text-sm shadow-xs cursor-pointer border-sky-500/30 hover:border-sky-500/60"
+              >
+                <CheckCheck className="h-4 w-4 text-sky-400" />
+                <span>Mark All as Read</span>
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 

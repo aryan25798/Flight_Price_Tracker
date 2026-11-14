@@ -28,6 +28,7 @@ import {
 import { signOutAction } from "@/app/dashboard/actions";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { NotificationBell } from "@/components/notifications/notification-bell";
+import { AICopilotLauncher } from "@/components/ai/ai-copilot-launcher";
 import { AeroDropLogo } from "@/components/brand/aerodrop-logo";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -417,6 +418,9 @@ export function AppShell({
             {children}
           </div>
         </main>
+
+        {/* Global Application-Wide AI Copilot */}
+        <AICopilotLauncher profile={profile} initialScope="user" />
       </div>
     </div>
   );

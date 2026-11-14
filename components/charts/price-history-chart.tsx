@@ -11,7 +11,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { ArrowDown, ArrowUp, CheckCircle, Clock, ExternalLink, LineChart, List, Plane, TrendingDown } from "lucide-react";
+import { ArrowDown, ArrowUp, CheckCircle, Clock, ExternalLink, LineChart, List, Plane, Sparkles, TrendingDown } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { formatCurrency, formatDateShort } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -200,9 +200,32 @@ export function PriceHistoryChart({
           </button>
         </div>
 
-        <span className="text-[11px] text-sky-400 font-mono font-semibold">
-          {points.length} checks logged
-        </span>
+        <div className="flex items-center gap-2">
+          {points.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                window.dispatchEvent(
+                  new CustomEvent("aerodrop:open-copilot", {
+                    detail: {
+                      prompt: `Analyze fare volatility and price history for this route (${points.length} checks logged). Lowest observed is ${formatCurrency(lowest, currency)}, latest is ${formatCurrency(latest, currency)}, and target alert is ${formatCurrency(targetPrice, currency)}. How volatile are these fares and what do you recommend?`,
+                    },
+                  })
+                );
+              }}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-sky-500/30 bg-sky-500/10 hover:bg-sky-500/20 px-2.5 py-1 text-[11px] font-bold text-sky-300 transition-all cursor-pointer shadow-2xs"
+              title="Ask AI to analyze this price trend"
+            >
+              <Sparkles className="h-3 w-3 text-sky-400" />
+              <span className="hidden sm:inline">Explain Volatility with AI</span>
+              <span className="sm:hidden">AI Analysis</span>
+            </button>
+          )}
+
+          <span className="text-[11px] text-sky-400 font-mono font-semibold">
+            {points.length} checks logged
+          </span>
+        </div>
       </div>
 
       {viewMode === "chart" ? (

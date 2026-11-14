@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { signOutAction } from "@/app/dashboard/actions";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
+import { AICopilotLauncher } from "@/components/ai/ai-copilot-launcher";
 import { AeroDropLogo } from "@/components/brand/aerodrop-logo";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -348,6 +349,9 @@ export function AdminShell({ profile, children }: AdminShellProps) {
             {children}
           </div>
         </main>
+
+        {/* Global Superadmin Telemetry Copilot */}
+        <AICopilotLauncher profile={profile} initialScope="admin" />
       </div>
     </div>
   );

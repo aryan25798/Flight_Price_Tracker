@@ -500,11 +500,31 @@ export function FlightSearchForm({
                   </div>
                 </div>
 
-                {quote.bestPrice && (
-                  <Badge variant="success" dot className="text-xs">
-                    Lowest: {formatCurrency(quote.bestPrice, quote.currency || currency)}
-                  </Badge>
-                )}
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      window.dispatchEvent(
+                        new CustomEvent("aerodrop:open-copilot", {
+                          detail: {
+                            prompt: `Evaluate live airline deals for ${origin} → ${destination} on ${departureDate}. Lowest fare is ${formatCurrency(quote.bestPrice || 0, quote.currency || currency)} with ${quote.options?.length || 0} seller options found. Is this a good time to book or should I set an alert?`,
+                          },
+                        })
+                      );
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-sky-500/30 bg-sky-500/15 hover:bg-sky-500/25 px-2.5 py-1 text-xs font-bold text-sky-300 transition-all cursor-pointer shadow-2xs"
+                    title="Ask AI to evaluate these flight offers"
+                  >
+                    <Sparkles className="h-3 w-3 text-sky-400" />
+                    <span>Evaluate with AI</span>
+                  </button>
+
+                  {quote.bestPrice && (
+                    <Badge variant="success" dot className="text-xs">
+                      Lowest: {formatCurrency(quote.bestPrice, quote.currency || currency)}
+                    </Badge>
+                  )}
+                </div>
               </div>
 
               {quote.options && quote.options.length > 0 ? (
