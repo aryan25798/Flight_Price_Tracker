@@ -8,8 +8,8 @@
 
 export const AI_CONFIG = {
   // Primary model on Google AI Studio Free Tier
-  defaultModel: "gemini-2.0-flash",
-  fallbackModel: "gemini-1.5-flash",
+  defaultModel: "gemini-3.5-flash",
+  fallbackModel: "gemini-3-flash-preview",
   providerName: "google",
   
   // Rate & Token Guardrails

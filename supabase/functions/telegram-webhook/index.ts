@@ -235,7 +235,7 @@ User question: "${text.replace(/"/g, "'")}".
 Answer in concise, helpful Telegram HTML formatting (max 100 words). If the user asks about an unknown route, instruct them to add it from the web dashboard.`;
 
       const aiRes = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${geminiApiKey}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

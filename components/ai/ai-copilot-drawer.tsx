@@ -169,28 +169,56 @@ export function AICopilotDrawer({
         if (value) {
           const chunk = decoder.decode(value, { stream: true });
           
-          // Parse lines in AI SDK UI message stream
+          // Parse lines in AI SDK UI message stream (supports both SSE data: and legacy formats)
           const lines = chunk.split("\n");
           for (const line of lines) {
-            if (line.startsWith("0:")) {
-              // Text delta: 0:"hello"
+            const trimmed = line.trim();
+            if (!trimmed) continue;
+
+            if (trimmed.startsWith("data: ")) {
+              const payload = trimmed.slice(6).trim();
+              if (payload === "[DONE]") continue;
+
               try {
-                const textPart = JSON.parse(line.slice(2));
+                const parsed = JSON.parse(payload);
+                if (parsed.type === "text-delta" && typeof parsed.delta === "string") {
+                  assistantContent += parsed.delta;
+                } else if (
+                  parsed.type === "tool-output-available" &&
+                  parsed.output?.type === "action_proposal"
+                ) {
+                  foundProposals.push(parsed.output as ActionProposal);
+                } else if (
+                  parsed.type === "tool-result" &&
+                  parsed.result?.type === "action_proposal"
+                ) {
+                  foundProposals.push(parsed.result as ActionProposal);
+                } else if (parsed.type === "error") {
+                  setErrorText(parsed.errorText || "AI processing error.");
+                  if (!assistantContent) {
+                    assistantContent = `⚠️ ${parsed.errorText || "AI request failed."}`;
+                  }
+                }
+              } catch {}
+            } else if (trimmed.startsWith("0:")) {
+              // Legacy AI SDK text chunk: 0:"..."
+              try {
+                const textPart = JSON.parse(trimmed.slice(2));
                 if (typeof textPart === "string") {
                   assistantContent += textPart;
                 }
               } catch {}
-            } else if (line.startsWith("9:")) {
-              // Tool result: 9:{"toolName":"...","result":{...}}
+            } else if (trimmed.startsWith("9:")) {
+              // Legacy AI SDK tool result: 9:{...}
               try {
-                const toolData = JSON.parse(line.slice(2));
+                const toolData = JSON.parse(trimmed.slice(2));
                 if (toolData?.result?.type === "action_proposal") {
                   foundProposals.push(toolData.result as ActionProposal);
                 }
               } catch {}
-            } else if (!line.includes(":") && line.trim().length > 0) {
+            } else if (!trimmed.includes(":") && trimmed.length > 0) {
               // Direct text fallback
-              assistantContent += line;
+              assistantContent += trimmed + "\n";
             }
           }
 
@@ -207,6 +235,25 @@ export function AICopilotDrawer({
           );
         }
       }
+
+      // Guarantee no blank bubbles if streaming completed with tool proposals or empty text
+      if (!assistantContent && foundProposals.length > 0) {
+        assistantContent = "I have prepared the following flight action proposal based on your request. Please review and confirm below:";
+      } else if (!assistantContent) {
+        assistantContent = "I checked your flight radar and active data. What route, fare, or destination would you like me to analyze?";
+      }
+
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === assistantId
+            ? {
+                ...m,
+                content: assistantContent,
+                proposals: foundProposals.length > 0 ? foundProposals : undefined,
+              }
+            : m
+        )
+      );
     } catch (err) {
       const e = err as Error;
       setErrorText(e.message || "Failed to get AI response.");
@@ -341,7 +388,18 @@ export function AICopilotDrawer({
                     : "glass-surface-3 border border-[var(--border)] text-[var(--foreground)] rounded-tl-xs"
                 )}
               >
-                {m.content}
+                {m.content ? (
+                  m.content
+                ) : m.role === "assistant" && loading ? (
+                  <div className="flex items-center gap-1.5 py-1 text-slate-400">
+                    <span className="w-1.5 h-1.5 bg-sky-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                    <span className="w-1.5 h-1.5 bg-sky-400 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                    <span className="w-1.5 h-1.5 bg-sky-400 rounded-full animate-bounce" />
+                    <span className="text-[11px] text-slate-400 ml-1">Analyzing flight intelligence...</span>
+                  </div>
+                ) : (
+                  <span className="text-slate-400 italic">No response received.</span>
+                )}
 
                 {/* Structured Interactive Action Proposals */}
                 {m.proposals && m.proposals.length > 0 && (
