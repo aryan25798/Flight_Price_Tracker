@@ -1,6 +1,7 @@
 import { fetchLiveFlightPrices, type FlightOption } from "./pricing-service";
 import { generateMultiSiteComparisonLinks } from "@/lib/flight-urls";
 import { AmadeusAdapter } from "./adapters/amadeus";
+import { SerpApiGoogleFlightsAdapter } from "./adapters/serpapi-google-flights";
 import {
   calculateFlightTimeline,
   validateFlightMatchesRequestedDate,
@@ -273,7 +274,7 @@ export class FlightSearchService {
           allOffers.length > 1
             ? "Fares reflect verified airline rates. For guaranteed live-seat checkout, compare across partner portals below."
             : allOffers.length === 1
-            ? "Showing 1 cached low-fare snapshot from Travelpayouts. To check all 15+ live departures in real-time, compare across Google Flights, MakeMyTrip, or Skyscanner below, or configure an Amadeus API key in Settings for full real-time GDS flight search."
+            ? "Showing 1 cached low-fare snapshot from Travelpayouts. To check all 15+ live departures in real-time, compare across Google Flights, MakeMyTrip, or Skyscanner below, or add a SERPAPI_API_KEY in Vercel to unlock real-time Google Flights search."
             : "No airline fares available for this exact date and route combination.",
       },
     };
@@ -298,7 +299,21 @@ export class FlightSearchService {
     const offers: NormalizedFlightOffer[] = [];
     const seenFingerprints = new Set<string>();
 
-    // 1. Query Amadeus GDS live flight offers if configured
+    // 1. Query SerpApi Google Flights Live Search Engine if configured
+    if (SerpApiGoogleFlightsAdapter.isConfigured()) {
+      try {
+        const serpOffers = await SerpApiGoogleFlightsAdapter.searchFlights(query);
+        serpOffers.forEach((o) => {
+          o.comparisonSites = comparisonSites.map((s) => ({ name: s.name, url: s.url }));
+          offers.push(o);
+          seenFingerprints.add(`${o.airlineCode}_${o.flightNumber.replace(/\s+/g, "")}_${o.departureTime}`);
+        });
+      } catch (err) {
+        console.error("SerpApi Google Flights adapter error:", err);
+      }
+    }
+
+    // 2. Query Amadeus GDS live flight offers if configured
     if (AmadeusAdapter.isConfigured()) {
       try {
         const amadeusOffers = await AmadeusAdapter.searchFlights(query);
@@ -312,7 +327,7 @@ export class FlightSearchService {
       }
     }
 
-    // 2. Query Travelpayouts / Aviasales cached fare engine
+    // 3. Query Travelpayouts / Aviasales cached fare engine
     const rawQuote = await fetchLiveFlightPrices({
       origin: query.origin,
       destination: query.destination,
