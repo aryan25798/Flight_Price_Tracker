@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   AlertCircle,
   Bell,
+  Calendar,
   Check,
   CheckCheck,
   ChevronLeft,
@@ -62,6 +63,35 @@ export function NotificationCenter({
   }, [initialNotifications, initialUnreadCount]);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  const groupedNotifications = React.useMemo(() => {
+    const groups: { label: string; items: NotificationLog[] }[] = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    const todayItems: NotificationLog[] = [];
+    const yesterdayItems: NotificationLog[] = [];
+    const earlierItems: NotificationLog[] = [];
+
+    for (const n of notifications) {
+      const itemDate = new Date(n.created_at);
+      if (itemDate >= today) {
+        todayItems.push(n);
+      } else if (itemDate >= yesterday) {
+        yesterdayItems.push(n);
+      } else {
+        earlierItems.push(n);
+      }
+    }
+
+    if (todayItems.length > 0) groups.push({ label: "Today", items: todayItems });
+    if (yesterdayItems.length > 0) groups.push({ label: "Yesterday", items: yesterdayItems });
+    if (earlierItems.length > 0) groups.push({ label: "Earlier", items: earlierItems });
+
+    return groups;
+  }, [notifications]);
 
   async function handleMarkAllAsRead() {
     setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
@@ -249,8 +279,16 @@ export function NotificationCenter({
           )}
         </Card>
       ) : (
-        <div className="space-y-3">
-          {notifications.map((n) => {
+        <div className="space-y-6">
+          {groupedNotifications.map((group) => (
+            <div key={group.label} className="space-y-3">
+              <div className="flex items-center gap-2.5 px-1 pt-1">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-sky-400">
+                  {group.label}
+                </span>
+                <div className="h-px flex-1 bg-[var(--border)]" />
+              </div>
+              {group.items.map((n) => {
             const isPriceDrop = n.notification_type === "price_drop";
             const origin =
               n.tracked_flights?.origin || n.monitored_routes?.origin || "Route";
@@ -301,12 +339,23 @@ export function NotificationCenter({
                   {/* Body Info */}
                   <div className="space-y-1.5 min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-extrabold text-sm sm:text-base tracking-tight text-[var(--foreground)]">
-                        {isPriceDrop
-                          ? `🚨 Price Drop Alert: ${origin} → ${destination}`
-                          : n.notification_type === "status_update"
-                            ? `4-Hour Status Update: ${origin} → ${destination}`
-                            : `Radar Monitoring: ${origin} → ${destination}`}
+                      <span className="font-extrabold text-sm sm:text-base tracking-tight text-[var(--foreground)] flex items-center gap-1.5">
+                        {isPriceDrop ? (
+                          <>
+                            <TrendingDown className="h-4 w-4 text-emerald-400 shrink-0" />
+                            <span>Price Drop Alert: {origin} → {destination}</span>
+                          </>
+                        ) : n.notification_type === "status_update" ? (
+                          <>
+                            <Radio className="h-4 w-4 text-sky-400 shrink-0" />
+                            <span>4-Hour Routine Check: {origin} → {destination}</span>
+                          </>
+                        ) : (
+                          <>
+                            <Plane className="h-4 w-4 text-sky-400 shrink-0" />
+                            <span>Radar Update: {origin} → {destination}</span>
+                          </>
+                        )}
                       </span>
 
                       {!n.is_read && (
@@ -322,13 +371,15 @@ export function NotificationCenter({
 
                     <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--muted-foreground)]">
                       {depDate && (
-                        <span>
-                          📅 Departure: <strong>{formatDateShort(depDate)}</strong>
+                        <span className="inline-flex items-center gap-1">
+                          <Calendar className="h-3 w-3 text-slate-400" />
+                          <span>Departure: <strong>{formatDateShort(depDate)}</strong></span>
                         </span>
                       )}
                       {airline && (
-                        <span>
-                          🛫 Airline: <strong>{airline}</strong>
+                        <span className="inline-flex items-center gap-1">
+                          <Plane className="h-3 w-3 text-slate-400" />
+                          <span>Airline: <strong>{airline}</strong></span>
                         </span>
                       )}
                       {n.current_price && (
@@ -343,8 +394,9 @@ export function NotificationCenter({
                             </span>
                           )}
                           {discountPct && discountPct > 0 && (
-                            <span className="rounded-md bg-emerald-500/15 border border-emerald-500/30 px-1.5 py-0.5 text-[10px] font-bold text-emerald-300">
-                              ↓ {discountPct}% drop
+                            <span className="inline-flex items-center gap-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 px-1.5 py-0.5 text-[10px] font-bold text-emerald-300">
+                              <TrendingDown className="h-2.5 w-2.5" />
+                              <span>{discountPct}% drop</span>
                             </span>
                           )}
                         </span>
@@ -400,6 +452,8 @@ export function NotificationCenter({
               </div>
             );
           })}
+            </div>
+          ))}
         </div>
       )}
 
