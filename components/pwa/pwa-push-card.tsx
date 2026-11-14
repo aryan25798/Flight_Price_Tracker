@@ -148,7 +148,15 @@ export function PwaPushCard() {
       }
     } catch (err: unknown) {
       console.error("Push subscription error:", err);
-      toast.error(err instanceof Error ? err.message : "Failed to update push subscription");
+      const msg = err instanceof Error ? err.message : "";
+      if (msg.toLowerCase().includes("push service error")) {
+        toast.error(
+          "Push blocked by browser. If using Brave, enable 'Use Google services for push messaging' in brave://settings/privacy, or try Chrome/Edge.",
+          { duration: 8000 },
+        );
+      } else {
+        toast.error(msg || "Failed to update push subscription");
+      }
     } finally {
       setLoading(false);
     }
