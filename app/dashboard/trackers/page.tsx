@@ -1,6 +1,9 @@
+import Link from "next/link";
+import { Plus, Radio, Plane, ShieldCheck, Sparkles } from "lucide-react";
 import { createClient, getAuthenticatedProfile } from "@/lib/supabase/server";
 import { TrackersTable } from "@/components/dashboard/trackers-table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import type { TrackedFlight } from "@/types/database";
 
 const DEFAULT_PAGE_SIZE = 15;
@@ -80,17 +83,28 @@ export default async function TrackersPage({
         : 3;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 sm:space-y-8">
+      {/* Top Header Bar with Context & Action */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-500/30 bg-sky-500/10 px-3 py-0.5 text-xs font-semibold text-sky-300">
+              <Radio className="h-3.5 w-3.5 text-sky-400" />
+              <span>Fleet Monitoring Matrix</span>
+            </span>
+            <span className="text-xs text-[var(--muted-foreground)]">
+              Cron: 4h Routine
+            </span>
+          </div>
           <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[var(--foreground)]">
             My Tracked Flights
           </h2>
-          <p className="text-xs sm:text-sm text-[var(--muted-foreground)] leading-relaxed">
-            Manage your active and paused flight alerts, compare live seller rates across 6 sites, and inspect fare trends.
+          <p className="text-xs sm:text-sm text-[var(--muted-foreground)] leading-relaxed max-w-2xl">
+            Manage your active and paused flight alerts, compare live seller rates across 6 sites, and inspect historical fare dips.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+
+        <div className="flex items-center gap-3">
           {isUnlimited ? (
             <Badge variant="cyan" dot className="text-xs font-semibold capitalize border-cyan-500/30">
               {isSuperAdmin ? "Super Admin" : userTier} · Unlimited (∞)
@@ -100,6 +114,13 @@ export default async function TrackersPage({
               {activeCount ?? 0} / {effectiveLimit} Trackers Used
             </Badge>
           )}
+
+          <Link href="/dashboard">
+            <Button size="sm" className="gap-1.5 font-bold shadow-md bg-sky-600 hover:bg-sky-500 text-white rounded-xl px-4 min-h-[38px] transition-all">
+              <Plus className="h-4 w-4" />
+              <span>Track New Route</span>
+            </Button>
+          </Link>
         </div>
       </div>
 

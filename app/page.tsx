@@ -55,7 +55,7 @@ export default async function HomePage() {
             <ThemeToggle />
             {user ? (
               <Link href="/dashboard">
-                <Button className="gap-2 font-bold shadow-md bg-blue-600 hover:bg-blue-500 text-white min-h-[40px] px-4 rounded-xl">
+                <Button className="gap-2 font-bold shadow-md bg-sky-600 hover:bg-sky-500 text-white min-h-[40px] px-4 rounded-xl transition-all">
                   <span>Open Radar</span>
                   <ArrowRight className="h-4 w-4" />
                 </Button>
@@ -63,12 +63,12 @@ export default async function HomePage() {
             ) : (
               <div className="flex items-center gap-2">
                 <Link href="/login">
-                  <Button variant="ghost" size="sm" className="font-semibold text-xs sm:text-sm text-[var(--foreground)] hover:bg-white/5">
+                  <Button variant="ghost" size="sm" className="font-semibold text-xs sm:text-sm text-[var(--foreground)] hover:bg-white/5 rounded-xl">
                     Sign In
                   </Button>
                 </Link>
                 <Link href="/signup">
-                  <Button size="sm" className="font-bold shadow-md text-xs sm:text-sm bg-blue-600 hover:bg-blue-500 text-white rounded-xl px-4 min-h-[38px]">
+                  <Button size="sm" className="font-bold shadow-md text-xs sm:text-sm bg-sky-600 hover:bg-sky-500 text-white rounded-xl px-4 min-h-[38px] transition-all">
                     Get Started Free
                   </Button>
                 </Link>
@@ -123,13 +123,13 @@ export default async function HomePage() {
               {/* Action Buttons */}
               <div className="flex flex-wrap items-center justify-center gap-3.5 pt-2">
                 <Link href={user ? "/dashboard" : "/signup"}>
-                  <Button size="lg" className="min-h-[48px] px-8 gap-2 text-base font-bold shadow-lg bg-blue-600 hover:bg-blue-500 text-white rounded-xl">
+                  <Button size="lg" className="min-h-[48px] px-8 gap-2 text-base font-bold shadow-xl bg-sky-600 hover:bg-sky-500 text-white rounded-xl shadow-sky-950/50 transition-all hover:-translate-y-0.5">
                     <span>{user ? "Open Flight Radar" : "Start Tracking Routes Free"}</span>
                     <ArrowRight className="h-4 w-4" />
                   </Button>
                 </Link>
                 <Link href="/login">
-                  <Button size="lg" variant="outline" className="min-h-[48px] px-6 text-base font-semibold border-white/15 bg-slate-900/50 hover:bg-white/10 text-white rounded-xl">
+                  <Button size="lg" variant="outline" className="min-h-[48px] px-6 text-base font-semibold border-white/15 bg-slate-900/60 hover:bg-white/10 text-white rounded-xl backdrop-blur-md transition-all">
                     Existing User Sign In
                   </Button>
                 </Link>
@@ -424,7 +424,7 @@ export default async function HomePage() {
             </p>
             <div className="pt-2">
               <Link href={user ? "/dashboard" : "/signup"}>
-                <Button size="lg" className="min-h-[50px] px-9 gap-2 text-base font-bold shadow-xl bg-blue-600 hover:bg-blue-500 text-white rounded-xl">
+                <Button size="lg" className="min-h-[50px] px-9 gap-2 text-base font-bold shadow-xl bg-sky-600 hover:bg-sky-500 text-white rounded-xl shadow-sky-950/50 transition-all hover:-translate-y-0.5">
                   <span>{user ? "Open Flight Radar" : "Start Tracking Now — 100% Free"}</span>
                   <ArrowRight className="h-4 w-4" />
                 </Button>

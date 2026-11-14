@@ -88,7 +88,7 @@ export function AppShell({
       icon: Bell,
       badge: unreadNotificationCount > 0 ? unreadNotificationCount : undefined,
     },
-    { href: "/dashboard/settings", label: "Telegram Alerts", icon: Radio },
+    { href: "/dashboard/settings", label: "Alerts & Settings", icon: Settings },
   ];
 
   if (profile.role === "super_admin") {
