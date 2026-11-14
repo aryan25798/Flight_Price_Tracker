@@ -46,9 +46,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ found: false, message: "Missing required parameters" }, { status: 400 });
     }
 
-    // Credentials from environment variables (SEC-01)
-    const token = process.env.TRAVELPAYOUTS_API_TOKEN || "51ea75a8dc25123912e5465f2fe97c04";
+    // Credentials strictly from environment variables (SEC-01)
+    const token = process.env.TRAVELPAYOUTS_API_TOKEN;
     const marker = process.env.TRAVELPAYOUTS_MARKER || "804763";
+
+    if (!token) {
+      console.error("TRAVELPAYOUTS_API_TOKEN is missing in server environment variables.");
+      return NextResponse.json(
+        { found: false, message: "Flight price check service temporarily unavailable." },
+        { status: 503 },
+      );
+    }
 
     const comparisonSites = generateMultiSiteComparisonLinks({
       origin,

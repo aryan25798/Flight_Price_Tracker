@@ -111,13 +111,23 @@ describe("AeroDrop Multi-Channel Email Templates", () => {
 });
 
 describe("AeroDrop VAPID Key Infrastructure", () => {
-  it("provides resilient VAPID key fallback via API route", async () => {
+  it("provides VAPID public key via API route when configured", async () => {
+    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY = "test_vapid_public_key_mock_string_1234567890";
     const { GET } = await import("@/app/api/push/vapid-public-key/route");
     const res = await GET();
     const data = await res.json();
     expect(res.status).toBe(200);
-    expect(data.publicKey).toBeDefined();
-    expect(typeof data.publicKey).toBe("string");
-    expect(data.publicKey.length).toBeGreaterThan(20);
+    expect(data.publicKey).toBe("test_vapid_public_key_mock_string_1234567890");
+  });
+
+  it("fails closed with 503 if VAPID public key is unconfigured", async () => {
+    const originalKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+    delete process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+    const { GET } = await import("@/app/api/push/vapid-public-key/route");
+    const res = await GET();
+    const data = await res.json();
+    expect(res.status).toBe(503);
+    expect(data.error).toBeDefined();
+    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY = originalKey;
   });
 });

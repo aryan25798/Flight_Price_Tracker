@@ -126,12 +126,13 @@ export function PwaPushCard() {
               vapidPublicKey = keyData.publicKey;
             }
           } catch {
-            // fallback
+            // failed fetch
           }
         }
 
         if (!vapidPublicKey) {
-          vapidPublicKey = "BJ8vwvXze5OJCIyVBd18NfT8BYzWAjXoY6TtMYIzANGf0nwUZ-t6GI9tM6vYtnUUxTffU_08-p9ymAaZq5Xff5s";
+          toast.error("Web Push is currently unconfigured on the server. Please contact support.");
+          return;
         }
 
         const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
