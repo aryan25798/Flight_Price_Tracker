@@ -109,10 +109,21 @@ export function PwaPushCard() {
           return;
         }
 
-        const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+        let vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
         if (!vapidPublicKey) {
-          toast.error("VAPID public key not configured on server.");
-          return;
+          try {
+            const keyRes = await fetch("/api/push/vapid-public-key");
+            if (keyRes.ok) {
+              const keyData = await keyRes.json();
+              vapidPublicKey = keyData.publicKey;
+            }
+          } catch {
+            // fallback
+          }
+        }
+
+        if (!vapidPublicKey) {
+          vapidPublicKey = "BJ8vwvXze5OJCIyVBd18NfT8BYzWAjXoY6TtMYIzANGf0nwUZ-t6GI9tM6vYtnUUxTffU_08-p9ymAaZq5Xff5s";
         }
 
         const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);

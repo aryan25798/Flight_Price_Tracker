@@ -162,11 +162,20 @@ export function NotificationBell({ initialUnreadCount }: NotificationBellProps) 
         )}
       </button>
 
+      {/* Mobile Dimmed Backdrop Overlay */}
+      {open && (
+        <div
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-xs sm:hidden"
+          onClick={() => setOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
       {/* Floating Glassmorphism Popover Panel */}
       {open && (
-        <div className="absolute right-0 mt-2 z-50 w-[92vw] sm:w-[400px] max-w-[420px] rounded-2xl glass-floating border border-[var(--border)] shadow-[0_20px_50px_rgba(0,0,0,0.85)] p-0 text-[var(--foreground)] animate-in fade-in zoom-in-95 duration-150 overflow-hidden">
+        <div className="fixed left-3 right-3 top-16 z-50 sm:static sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[400px] sm:max-w-[420px] max-h-[calc(100dvh-80px)] sm:max-h-[540px] flex flex-col rounded-2xl glass-floating border border-[var(--border)] shadow-[0_20px_50px_rgba(0,0,0,0.85)] p-0 text-[var(--foreground)] animate-in fade-in zoom-in-95 duration-150 overflow-hidden">
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-3 bg-[var(--glass-surface-2)]/60 backdrop-blur-md">
+          <div className="shrink-0 flex items-center justify-between border-b border-[var(--border)] px-4 py-3 bg-[var(--glass-surface-2)]/80 backdrop-blur-md">
             <div className="flex items-center gap-2">
               <span className="text-sm font-extrabold tracking-tight">Notifications</span>
               {unreadCount > 0 ? (
@@ -195,7 +204,7 @@ export function NotificationBell({ initialUnreadCount }: NotificationBellProps) 
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="rounded-lg p-1 text-[var(--muted-foreground)] hover:bg-[var(--glass-surface-3)] hover:text-[var(--foreground)]"
+                className="rounded-lg p-1 text-[var(--muted-foreground)] hover:bg-[var(--glass-surface-3)] hover:text-[var(--foreground)] cursor-pointer"
                 aria-label="Close"
               >
                 <X className="h-3.5 w-3.5" />
@@ -204,7 +213,7 @@ export function NotificationBell({ initialUnreadCount }: NotificationBellProps) 
           </div>
 
           {/* Quick Filter Tabs */}
-          <div className="flex items-center gap-2 px-4 py-2 border-b border-[var(--border)] text-xs bg-[var(--glass-surface-1)]">
+          <div className="shrink-0 flex items-center gap-2 px-4 py-2 border-b border-[var(--border)] text-xs bg-[var(--glass-surface-1)]">
             <button
               type="button"
               onClick={() => setFilter("all")}
@@ -230,7 +239,7 @@ export function NotificationBell({ initialUnreadCount }: NotificationBellProps) 
           </div>
 
           {/* List Body */}
-          <div className="max-h-[380px] overflow-y-auto divide-y divide-[var(--border)] custom-scrollbar">
+          <div className="flex-1 overflow-y-auto min-h-0 divide-y divide-[var(--border)] custom-scrollbar">
             {loading ? (
               <div className="py-8 text-center text-xs text-[var(--muted-foreground)] space-y-2">
                 <div className="h-5 w-5 rounded-full border-2 border-sky-400 border-t-transparent animate-spin mx-auto" />
@@ -251,9 +260,15 @@ export function NotificationBell({ initialUnreadCount }: NotificationBellProps) 
             ) : (
               displayedNotifications.map((n) => {
                 const origin =
-                  n.tracked_flights?.origin || n.monitored_routes?.origin || "Route";
+                  n.tracked_flights?.origin || n.monitored_routes?.origin || "";
                 const dest =
                   n.tracked_flights?.destination || n.monitored_routes?.destination || "";
+                const routeDisplay =
+                  origin && dest
+                    ? `${origin} → ${dest}`
+                    : origin
+                      ? origin
+                      : "Flight Radar";
                 const isDrop = n.notification_type === "price_drop";
                 const savings =
                   n.previous_price && n.current_price
@@ -267,7 +282,7 @@ export function NotificationBell({ initialUnreadCount }: NotificationBellProps) 
                       if (!n.is_read) {
                         handleMarkSingleRead(n.id, { stopPropagation: () => {} } as React.MouseEvent);
                       }
-                      if (origin !== "Route" && dest) {
+                      if (origin && dest) {
                         setOpen(false);
                         router.push(`/dashboard?origin=${origin}&destination=${dest}`);
                       }
@@ -302,10 +317,10 @@ export function NotificationBell({ initialUnreadCount }: NotificationBellProps) 
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-xs font-extrabold text-[var(--foreground)] truncate">
                           {isDrop
-                            ? `Price Drop: ${origin} → ${dest}`
+                            ? `Price Drop: ${routeDisplay}`
                             : n.notification_type === "status_update"
-                              ? `Status Check: ${origin} → ${dest}`
-                              : `Radar Active: ${origin} → ${dest}`}
+                              ? `Status Check: ${routeDisplay}`
+                              : `Radar Active: ${routeDisplay}`}
                         </span>
                         <span className="text-[10px] text-[var(--muted-foreground)] shrink-0">
                           {formatRelativeTime(n.created_at)}
@@ -352,7 +367,7 @@ export function NotificationBell({ initialUnreadCount }: NotificationBellProps) 
           </div>
 
           {/* Footer with Link to Full Notification Center */}
-          <div className="border-t border-[var(--border)] p-2.5 bg-[var(--glass-surface-2)]/80 text-center">
+          <div className="shrink-0 border-t border-[var(--border)] p-2.5 bg-[var(--glass-surface-2)]/80 text-center">
             <Link
               href="/dashboard/notifications"
               onClick={() => setOpen(false)}

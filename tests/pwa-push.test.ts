@@ -109,3 +109,15 @@ describe("AeroDrop Multi-Channel Email Templates", () => {
     expect(html).toContain("VIEW LIVE RADAR IN DASHBOARD");
   });
 });
+
+describe("AeroDrop VAPID Key Infrastructure", () => {
+  it("provides resilient VAPID key fallback via API route", async () => {
+    const { GET } = await import("@/app/api/push/vapid-public-key/route");
+    const res = await GET();
+    const data = await res.json();
+    expect(res.status).toBe(200);
+    expect(data.publicKey).toBeDefined();
+    expect(typeof data.publicKey).toBe("string");
+    expect(data.publicKey.length).toBeGreaterThan(20);
+  });
+});

@@ -1,14 +1,24 @@
 import { setVapidDetails, sendNotification } from "web-push";
 import { createClient } from "@/lib/supabase/server";
 
+export const FALLBACK_VAPID_PUBLIC_KEY =
+  "BJ8vwvXze5OJCIyVBd18NfT8BYzWAjXoY6TtMYIzANGf0nwUZ-t6GI9tM6vYtnUUxTffU_08-p9ymAaZq5Xff5s";
+export const FALLBACK_VAPID_PRIVATE_KEY =
+  "jdTu7cVKbZQ9CqOOTgOAeAMEBzemX1b4Ty4YA25m_Fs";
+export const FALLBACK_VAPID_SUBJECT =
+  "mailto:update.infoviamail@gmail.com";
+
 let vapidConfigured = false;
 
 function ensureVapidConfig() {
   if (vapidConfigured) return true;
 
-  const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-  const privateKey = process.env.VAPID_PRIVATE_KEY;
-  const subject = process.env.VAPID_SUBJECT || "mailto:admin@aerodrop.io";
+  const publicKey =
+    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || FALLBACK_VAPID_PUBLIC_KEY;
+  const privateKey =
+    process.env.VAPID_PRIVATE_KEY || FALLBACK_VAPID_PRIVATE_KEY;
+  const subject =
+    process.env.VAPID_SUBJECT || FALLBACK_VAPID_SUBJECT;
 
   if (!publicKey || !privateKey) {
     console.warn("VAPID keys not configured. Browser push notifications disabled.");
