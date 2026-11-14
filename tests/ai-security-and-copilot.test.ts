@@ -204,6 +204,19 @@ describe("AeroDrop AI 2.0 Security, Database Access & Copilot Suite", () => {
     expect(AI_CONFIG.rateLimits.rpmPerUser).toBe(10);
   });
 
+  it("strips leaked internal tool reasoning preambles from response", () => {
+    const rawMess = `Now we have origin DEL, destination Pune (PNQ), date 2026-11-27. Need to search_flights. Use tool.Cheapest one-way flight from Delhi (DEL) to Pune (PNQ) on 2026-11-27:
+• **Airline**: IndiGo (6E)
+• **Flight**: 6E 2343
+• **Departure**: 02:15 AM (DEL)
+• **Price**: ₹6,834 INR`;
+
+    const formatted = formatChatContent(rawMess);
+    expect(formatted).not.toContain("Now we have origin DEL");
+    expect(formatted).not.toContain("Use tool.");
+    expect(formatted).toContain("Cheapest one-way flight from Delhi (DEL) to Pune (PNQ)");
+  });
+
   it("formats collapsed ASCII pipe tables into clean, structured bullet cards (Image 1 fix)", () => {
     const rawMess = `Sure! I can set up a price-drop tracker for you. I’ll need a few details:
 
