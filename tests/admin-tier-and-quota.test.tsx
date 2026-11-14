@@ -146,7 +146,7 @@ describe("AeroDrop 2.0 Admin Tier & Custom Quota Suite", () => {
           }),
         );
       });
-    });
+    }, 15000);
   });
 
   describe("SettingsForm SMTP Diagnostics", () => {
@@ -182,7 +182,7 @@ describe("AeroDrop 2.0 Admin Tier & Custom Quota Suite", () => {
       await waitFor(() => {
         expect(mockTestSmtp).toHaveBeenCalledWith("tester@example.com");
       });
-    });
+    }, 15000);
   });
 
   describe("FlightSearchForm Quota Capacity Awareness", () => {

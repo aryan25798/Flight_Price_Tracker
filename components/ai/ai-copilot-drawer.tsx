@@ -9,6 +9,7 @@ import {
   ChevronDown,
   Compass,
   CornerDownLeft,
+  ExternalLink,
   Flame,
   LineChart,
   Loader2,
@@ -75,7 +76,16 @@ export function AICopilotDrawer({
 
   const [mounted, setMounted] = React.useState(false);
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+
+  const scrollToBottom = React.useCallback((behavior: ScrollBehavior = "smooth") => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior, block: "end" });
+    } else if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+    }
+  }, []);
 
   // Restore conversation memory from sessionStorage on client mount
   React.useEffect(() => {
@@ -102,10 +112,35 @@ export function AICopilotDrawer({
     }
   }, [messages, mounted, scope]);
 
-  // Auto-scroll on new message
+  // When drawer opens, immediately snap to the bottom (where the user left off)
   React.useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, loading]);
+    if (isOpen) {
+      // 1. Immediate instant jump to prevent any flash of the top messages
+      scrollToBottom("auto");
+      // 2. Microtask snap after DOM painting settles
+      const timer1 = setTimeout(() => {
+        scrollToBottom("auto");
+      }, 50);
+      // 3. Smooth touch-up after markdown fonts and images finish loading
+      const timer2 = setTimeout(() => {
+        scrollToBottom("smooth");
+      }, 150);
+      return () => {
+        clearTimeout(timer1);
+        clearTimeout(timer2);
+      };
+    }
+  }, [isOpen, scrollToBottom]);
+
+  // Smooth auto-scroll when new messages arrive or loading state toggles
+  React.useEffect(() => {
+    if (isOpen) {
+      const timer = setTimeout(() => {
+        scrollToBottom("smooth");
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [messages, loading, isOpen, scrollToBottom]);
 
   // Focus input when opened
   React.useEffect(() => {
@@ -396,7 +431,10 @@ export function AICopilotDrawer({
         </div>
 
         {/* Message Stream Body */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-5 text-xs sm:text-sm">
+        <div
+          ref={scrollContainerRef}
+          className="flex-1 overflow-y-auto p-4 space-y-5 text-xs sm:text-sm"
+        >
           {messages.map((m) =>
             m.role === "user" ? (
               <div key={m.id} className="flex flex-col gap-1 items-end ml-auto max-w-[85%] group">
@@ -424,6 +462,57 @@ export function AICopilotDrawer({
                         <ReactMarkdown
                           remarkPlugins={[remarkGfm]}
                           components={{
+                            a: ({ href, children }) => {
+                              const rawHref = href || "";
+                              const textContent = React.Children.toArray(children)
+                                .map((c) => (typeof c === "string" ? c : ""))
+                                .join("")
+                                .trim();
+
+                              const isRawUrl =
+                                !textContent ||
+                                textContent.startsWith("http://") ||
+                                textContent.startsWith("https://") ||
+                                textContent.length > 35;
+
+                              let label = textContent;
+                              if (isRawUrl) {
+                                const lower = rawHref.toLowerCase();
+                                if (lower.includes("google.com/travel/flights") || lower.includes("google.com/flights")) {
+                                  label = "Compare on Google Flights";
+                                } else if (lower.includes("skyscanner")) {
+                                  label = "Compare on Skyscanner";
+                                } else if (lower.includes("makemytrip")) {
+                                  label = "Compare on MakeMyTrip";
+                                } else if (lower.includes("easemytrip")) {
+                                  label = "Compare on EaseMyTrip";
+                                } else if (lower.includes("aviasales")) {
+                                  label = "View Flight Deal on Aviasales";
+                                } else if (lower.includes("kayak")) {
+                                  label = "Compare on Kayak";
+                                } else {
+                                  try {
+                                    const u = new URL(rawHref);
+                                    label = `Open ${u.hostname.replace(/^www\./, "")}`;
+                                  } catch {
+                                    label = "View Flight Offer";
+                                  }
+                                }
+                              }
+
+                              return (
+                                <a
+                                  href={rawHref}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1.5 px-3 py-1 my-1 rounded-lg bg-sky-950/70 hover:bg-sky-900 border border-sky-400/30 hover:border-sky-400 text-sky-300 hover:text-white font-medium text-xs transition-all shadow-xs group no-underline"
+                                >
+                                  <Plane className="h-3 w-3 text-sky-400 group-hover:translate-x-0.5 transition-transform shrink-0" />
+                                  <span className="truncate max-w-[260px] sm:max-w-[320px]">{label}</span>
+                                  <ExternalLink className="h-3 w-3 text-sky-400/70 group-hover:text-sky-300 shrink-0 ml-0.5" />
+                                </a>
+                              );
+                            },
                             p: ({ children }) => (
                               <p className="mb-2.5 last:mb-0 leading-relaxed text-slate-200 font-normal">
                                 {children}

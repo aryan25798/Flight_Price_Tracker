@@ -189,6 +189,8 @@ describe("AeroDrop AI 2.0 Security, Database Access & Copilot Suite", () => {
     expect(USER_COPILOT_SYSTEM_PROMPT).toContain("You NEVER execute arbitrary SQL queries");
     expect(USER_COPILOT_SYSTEM_PROMPT).toContain("You NEVER fabricate flight prices");
     expect(USER_COPILOT_SYSTEM_PROMPT).toContain("SENSITIVE ACTIONS REQUIRE TWO-PHASE CONFIRMATION");
+    expect(USER_COPILOT_SYSTEM_PROMPT).toContain("PRESENTING BOOKING & COMPARISON LINKS");
+    expect(USER_COPILOT_SYSTEM_PROMPT).toContain("NEVER write raw URLs");
 
     expect(ADMIN_COPILOT_SYSTEM_PROMPT).toContain("You NEVER reveal user passwords");
     expect(ADMIN_COPILOT_SYSTEM_PROMPT).toContain("Every metric");
