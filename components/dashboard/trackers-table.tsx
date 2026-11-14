@@ -255,10 +255,16 @@ export function TrackersTable({
 
                       {/* Flight Details Row */}
                       <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--muted-foreground)]">
+                        {t.flight_number && (
+                          <span className="font-mono text-[11px] font-bold text-sky-400 bg-sky-950/60 px-1.5 py-0.5 rounded border border-sky-500/30">
+                            {t.airline_name ? `${t.airline_name} ` : ""}{t.flight_number}
+                          </span>
+                        )}
                         <span className="inline-flex items-center gap-1 font-semibold text-[var(--foreground)]">
                           <Calendar className="h-3 w-3 text-sky-400" />
                           {formatDateShort(t.departure_date)}
                         </span>
+                        {t.departure_time && <span>· Dep: {t.departure_time}</span>}
                         {t.return_date && <span>· Ret: {formatDateShort(t.return_date)}</span>}
                         <span>· {t.trip_type === "round_trip" ? "Round-trip" : "One-way"}</span>
                         <span>· {(t.cabin_class?.replace("_", " ") ?? "economy")}</span>
@@ -396,6 +402,11 @@ export function TrackersTable({
                               <span className="text-sm">{t.origin}</span>
                               <ArrowRight className="h-3.5 w-3.5 text-sky-400" />
                               <span className="text-sm">{t.destination}</span>
+                              {t.flight_number && (
+                                <span className="text-[10px] font-mono font-bold text-sky-400 bg-sky-950/60 px-1.5 py-0.5 rounded border border-sky-500/30">
+                                  {t.airline_name ? `${t.airline_name} ` : ""}{t.flight_number}
+                                </span>
+                              )}
                             </div>
                             <div className="text-[11px] text-[var(--muted-foreground)]">
                               {t.trip_type === "round_trip" ? "Round-trip" : "One-way"} · {(t.cabin_class?.replace("_", " ") ?? "economy")}
@@ -405,6 +416,7 @@ export function TrackersTable({
                           <td className="py-3.5 px-4 whitespace-nowrap">
                             <div className="font-semibold text-xs text-[var(--foreground)]">
                               {formatDateShort(t.departure_date)}
+                              {t.departure_time && <span className="font-normal text-[var(--muted-foreground)] ml-1">({t.departure_time})</span>}
                             </div>
                             {t.return_date && (
                               <div className="text-[11px] text-[var(--muted-foreground)]">

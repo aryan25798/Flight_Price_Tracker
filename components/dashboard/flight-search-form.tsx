@@ -656,7 +656,15 @@ export function FlightSearchForm({
                             type="button"
                             onClick={() => {
                               setValue("targetPrice", Math.round(opt.price * 0.95), { shouldValidate: true });
-                              toast.success(`Target set to ${formatCurrency(Math.round(opt.price * 0.95), currency)} for ${opt.airline}! Click "Activate Radar Tracker" to save.`);
+                              setValue("trackingMode", "exact_flight");
+                              if (opt.flightNumber) setValue("flightNumber", opt.flightNumber);
+                              if (opt.airlineCode) setValue("airlineCode", opt.airlineCode);
+                              if (opt.airline) setValue("airlineName", opt.airline);
+                              if (opt.departureTimeLocal) setValue("departureTime", opt.departureTimeLocal);
+                              if (opt.arrivalTimeLocal) setValue("arrivalTime", opt.arrivalTimeLocal);
+                              if (opt.bookingUrl) setValue("bookingUrl", opt.bookingUrl);
+                              if (opt.id) setValue("itineraryFingerprint", opt.id);
+                              toast.success(`Target set to ${formatCurrency(Math.round(opt.price * 0.95), currency)} for ${opt.airline} #${opt.flightNumber || ""}! Click "Activate Radar Tracker" to save.`);
                             }}
                             className="inline-flex items-center gap-1 rounded-xl border border-sky-400/30 bg-sky-500/15 hover:bg-sky-500/25 px-3 py-1.5 text-xs font-bold text-sky-300 transition-all cursor-pointer shadow-2xs"
                             title="Set price tracker for this specific flight"

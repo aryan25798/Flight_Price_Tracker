@@ -46,6 +46,14 @@ export async function createTrackerAction(rawInput: unknown): Promise<ActionResu
     p_currency: v.currency,
     p_target_price: v.targetPrice,
     p_provider: "travelpayouts",
+    p_flight_number: v.flightNumber || null,
+    p_airline_code: v.airlineCode || null,
+    p_airline_name: v.airlineName || null,
+    p_departure_time: v.departureTime || null,
+    p_arrival_time: v.arrivalTime || null,
+    p_itinerary_fingerprint: v.itineraryFingerprint || null,
+    p_booking_url: v.bookingUrl || null,
+    p_tracking_mode: v.trackingMode || (v.flightNumber ? "exact_flight" : "route"),
   });
 
   if (error) {

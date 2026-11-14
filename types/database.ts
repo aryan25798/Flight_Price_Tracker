@@ -62,6 +62,17 @@ export interface TrackedFlight {
   last_notified_price: number | null;
   last_notified_at: string | null;
   is_active: boolean;
+  tracking_mode?: "route" | "exact_flight";
+  flight_number?: string | null;
+  airline_code?: string | null;
+  airline_name?: string | null;
+  departure_time?: string | null;
+  arrival_time?: string | null;
+  itinerary_fingerprint?: string | null;
+  booking_url?: string | null;
+  initial_price?: number | null;
+  price_status?: string | null;
+  flight_details?: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
   monitored_routes?: {
@@ -70,6 +81,30 @@ export interface TrackedFlight {
     last_booking_url: string | null;
     status: RouteStatus;
   } | null;
+}
+
+export interface FlightSearchSession {
+  id: string;
+  user_id: string | null;
+  origin: string;
+  destination: string;
+  departure_date: string;
+  return_date: string | null;
+  trip_type: TripType;
+  adults: number;
+  children: number;
+  infants: number;
+  cabin_class: CabinClass;
+  currency: SupportedCurrency;
+  direct_only: boolean;
+  provider: string;
+  total_offers: number;
+  best_price: number | null;
+  price_status: string;
+  offers: unknown[];
+  search_metadata?: Record<string, unknown> | null;
+  expires_at: string;
+  created_at: string;
 }
 
 export interface PriceHistoryPoint {

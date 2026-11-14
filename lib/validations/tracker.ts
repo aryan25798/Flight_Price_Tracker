@@ -35,6 +35,14 @@ export const CreateTrackerSchema = z
       .number()
       .positive("Target price must be greater than 0")
       .max(10_000_000, "Target price is too high"),
+    trackingMode: z.enum(["route", "exact_flight"]).optional().default("route"),
+    flightNumber: z.string().trim().optional().nullable().or(z.literal("")),
+    airlineCode: z.string().trim().optional().nullable().or(z.literal("")),
+    airlineName: z.string().trim().optional().nullable().or(z.literal("")),
+    departureTime: z.string().trim().optional().nullable().or(z.literal("")),
+    arrivalTime: z.string().trim().optional().nullable().or(z.literal("")),
+    itineraryFingerprint: z.string().trim().optional().nullable().or(z.literal("")),
+    bookingUrl: z.string().trim().optional().nullable().or(z.literal("")),
   })
   .refine((data) => data.origin !== data.destination, {
     message: "Origin and destination airports must be different",
