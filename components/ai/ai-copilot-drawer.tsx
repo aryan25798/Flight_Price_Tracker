@@ -25,6 +25,7 @@ import {
   X,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AIActionCard, type ActionProposal } from "./ai-action-card";
@@ -421,6 +422,7 @@ export function AICopilotDrawer({
                     {m.content ? (
                       <div className="prose prose-invert max-w-none text-slate-200 text-[13px] leading-relaxed">
                         <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
                           components={{
                             p: ({ children }) => (
                               <p className="mb-2.5 last:mb-0 leading-relaxed text-slate-200 font-normal">
@@ -469,9 +471,41 @@ export function AICopilotDrawer({
                                 {children}
                               </blockquote>
                             ),
+                            table: ({ children }) => (
+                              <div className="my-3 w-full overflow-x-auto rounded-xl border border-white/10 bg-slate-950/60 shadow-xs">
+                                <table className="w-full text-left text-xs border-collapse divide-y divide-white/10">
+                                  {children}
+                                </table>
+                              </div>
+                            ),
+                            thead: ({ children }) => (
+                              <thead className="bg-slate-900/90 text-[11px] font-bold text-sky-400">
+                                {children}
+                              </thead>
+                            ),
+                            tbody: ({ children }) => (
+                              <tbody className="divide-y divide-white/5 text-slate-200">
+                                {children}
+                              </tbody>
+                            ),
+                            tr: ({ children }) => (
+                              <tr className="hover:bg-white/5 transition-colors">
+                                {children}
+                              </tr>
+                            ),
+                            th: ({ children }) => (
+                              <th className="px-3 py-2 font-semibold">
+                                {children}
+                              </th>
+                            ),
+                            td: ({ children }) => (
+                              <td className="px-3 py-2 text-slate-300">
+                                {children}
+                              </td>
+                            ),
                           }}
                         >
-                          {m.content}
+                          {m.content.replace(/\|\s*\|\s*/g, "|\n| ")}
                         </ReactMarkdown>
                       </div>
                     ) : m.role === "assistant" && loading ? (
