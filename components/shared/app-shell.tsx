@@ -28,6 +28,7 @@ import {
 import { signOutAction } from "@/app/dashboard/actions";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { NotificationBell } from "@/components/notifications/notification-bell";
+import { AeroDropLogo } from "@/components/brand/aerodrop-logo";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAutoHideHeader } from "@/hooks/use-auto-hide-header";
@@ -124,19 +125,10 @@ export function AppShell({
               )}
               title="AeroDrop Flight Radar"
             >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-400 via-blue-600 to-indigo-600 text-white shadow-[0_0_20px_rgba(56,189,248,0.35)] group-hover:shadow-[0_0_25px_rgba(56,189,248,0.5)] transition-all">
-                <Plane className="h-5 w-5 rotate-45 transform" />
-              </div>
-              {!isCollapsed && (
-                <div className="flex flex-col animate-in fade-in duration-200">
-                  <span className="text-base font-extrabold tracking-tight text-[var(--foreground)] leading-tight">
-                    AeroDrop
-                  </span>
-                  <span className="text-[10px] font-bold tracking-widest uppercase text-sky-400">
-                    Flight Radar
-                  </span>
-                </div>
-              )}
+              <AeroDropLogo
+                variant={isCollapsed ? "mark" : "full"}
+                size={isCollapsed ? "sm" : "md"}
+              />
             </Link>
           </div>
 
@@ -295,17 +287,7 @@ export function AppShell({
                   onClick={() => setMobileOpen(false)}
                   className="flex items-center gap-3 group"
                 >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-400 via-blue-600 to-indigo-600 text-white shadow-[0_0_20px_rgba(56,189,248,0.35)]">
-                    <Plane className="h-5 w-5 rotate-45 transform" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-base font-extrabold tracking-tight text-[var(--foreground)]">
-                      AeroDrop
-                    </span>
-                    <span className="text-[10px] font-bold tracking-widest uppercase text-sky-400">
-                      Flight Radar
-                    </span>
-                  </div>
+                  <AeroDropLogo variant="full" size="md" />
                 </Link>
 
                 <button

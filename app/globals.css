@@ -3,40 +3,40 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  /* Luxury Dark / Midnight Aerospace Foundation (Default Theme) */
-  --bg-deep: #070B14;
-  --bg-surface: #0B1120;
-  --bg-surface-elevated: #10192D;
+  /* Modern Aviation Intelligence Foundation (Default Theme) */
+  --bg-deep: #050811;
+  --bg-surface: #0a0f1d;
+  --bg-surface-elevated: #0f172a;
   
-  --background: #080C17;
+  --background: #060913;
   --foreground: #F8FAFC;
   
-  --card: #0D1527;
+  --card: #0b1120;
   --card-foreground: #F8FAFC;
   
-  --muted: #131E35;
+  --muted: #131c31;
   --muted-foreground: #94A3B8;
   
   --border: rgba(255, 255, 255, 0.08);
-  --border-strong: rgba(255, 255, 255, 0.16);
+  --border-strong: rgba(255, 255, 255, 0.15);
   --border-subtle: rgba(255, 255, 255, 0.04);
   
-  --glass-surface-1: rgba(13, 21, 39, 0.72);
-  --glass-surface-2: rgba(18, 28, 51, 0.65);
-  --glass-surface-3: rgba(24, 38, 68, 0.55);
-  --glass-surface-floating: rgba(10, 16, 30, 0.92);
+  --glass-surface-1: rgba(11, 17, 32, 0.88);
+  --glass-surface-2: rgba(15, 23, 42, 0.85);
+  --glass-surface-3: rgba(20, 30, 55, 0.75);
+  --glass-surface-floating: rgba(11, 17, 32, 0.96);
   
-  --glass-highlight: rgba(255, 255, 255, 0.08);
-  --glass-glow-sky: rgba(56, 189, 248, 0.15);
-  --glass-glow-indigo: rgba(99, 102, 241, 0.12);
+  --glass-highlight: rgba(255, 255, 255, 0.06);
+  --glass-glow-sky: rgba(56, 189, 248, 0.08);
+  --glass-glow-indigo: rgba(37, 99, 235, 0.08);
   
-  --primary: #38BDF8;
-  --primary-hover: #0284C7;
-  --primary-foreground: #080C16;
+  --primary: #2563EB;
+  --primary-hover: #1D4ED8;
+  --primary-foreground: #FFFFFF;
   
   --accent-blue: #2563EB;
   --accent-sky: #38BDF8;
-  --accent-cyan: #06B6D4;
+  --accent-cyan: #0284C7;
   
   --success: #10B981;
   --success-foreground: #FFFFFF;
@@ -47,39 +47,39 @@
   --destructive: #EF4444;
   --destructive-foreground: #FFFFFF;
 
-  --ring: rgba(56, 189, 248, 0.4);
+  --ring: rgba(37, 99, 235, 0.4);
 }
 
 .dark {
-  --bg-deep: #070B14;
-  --bg-surface: #0B1120;
-  --bg-surface-elevated: #10192D;
+  --bg-deep: #050811;
+  --bg-surface: #0a0f1d;
+  --bg-surface-elevated: #0f172a;
   
-  --background: #080C17;
+  --background: #060913;
   --foreground: #F8FAFC;
   
-  --card: #0D1527;
+  --card: #0b1120;
   --card-foreground: #F8FAFC;
   
-  --muted: #131E35;
+  --muted: #131c31;
   --muted-foreground: #94A3B8;
   
   --border: rgba(255, 255, 255, 0.08);
-  --border-strong: rgba(255, 255, 255, 0.16);
+  --border-strong: rgba(255, 255, 255, 0.15);
   --border-subtle: rgba(255, 255, 255, 0.04);
   
-  --glass-surface-1: rgba(13, 21, 39, 0.75);
-  --glass-surface-2: rgba(18, 28, 51, 0.68);
-  --glass-surface-3: rgba(24, 38, 68, 0.58);
-  --glass-surface-floating: rgba(10, 16, 30, 0.94);
+  --glass-surface-1: rgba(11, 17, 32, 0.88);
+  --glass-surface-2: rgba(15, 23, 42, 0.85);
+  --glass-surface-3: rgba(20, 30, 55, 0.75);
+  --glass-surface-floating: rgba(11, 17, 32, 0.96);
   
-  --glass-highlight: rgba(255, 255, 255, 0.08);
-  --glass-glow-sky: rgba(56, 189, 248, 0.15);
-  --glass-glow-indigo: rgba(99, 102, 241, 0.12);
+  --glass-highlight: rgba(255, 255, 255, 0.06);
+  --glass-glow-sky: rgba(56, 189, 248, 0.08);
+  --glass-glow-indigo: rgba(37, 99, 235, 0.08);
   
-  --primary: #38BDF8;
-  --primary-hover: #0284C7;
-  --primary-foreground: #080C16;
+  --primary: #2563EB;
+  --primary-hover: #1D4ED8;
+  --primary-foreground: #FFFFFF;
   
   --success: #10B981;
   --success-foreground: #FFFFFF;
@@ -90,7 +90,7 @@
   --destructive: #EF4444;
   --destructive-foreground: #FFFFFF;
 
-  --ring: rgba(56, 189, 248, 0.4);
+  --ring: rgba(37, 99, 235, 0.4);
 }
 
 /* Light Theme Override (Architectural Frost) */

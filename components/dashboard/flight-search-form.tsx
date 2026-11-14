@@ -7,6 +7,7 @@ import {
   ArrowRightLeft,
   Calendar,
   CheckCircle2,
+  Compass,
   ExternalLink,
   Globe,
   Info,
@@ -183,10 +184,10 @@ export function FlightSearchForm({
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="space-y-1">
             <div className="flex items-center gap-2.5">
-              <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-sky-500/15 text-sky-400 border border-sky-500/30 shadow-[0_0_12px_rgba(56,189,248,0.2)]">
-                <Plane className="h-4 w-4 rotate-45" />
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                <Compass className="h-4 w-4" />
               </span>
-              <CardTitle className="text-base sm:text-lg font-extrabold tracking-tight">
+              <CardTitle className="text-base sm:text-lg font-bold tracking-tight text-[var(--foreground)]">
                 Track Your Next Flight
               </CardTitle>
             </div>

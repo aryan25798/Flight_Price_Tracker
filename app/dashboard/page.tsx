@@ -164,13 +164,13 @@ export default async function DashboardPage({
         </div>
       </div>
 
-      {/* 4 Luxury Glass Metric Cards (Matching Reference Image) */}
+      {/* 4 Precision Metric Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
         {/* Metric 1: Active Trackers */}
-        <div className="glass-card-interactive rounded-2xl p-4 sm:p-5 space-y-2.5">
+        <div className="rounded-2xl border border-[var(--border)] bg-[#0b1120] p-4 sm:p-5 space-y-2.5 shadow-sm hover:border-sky-500/30 transition-all">
           <div className="flex items-center justify-between text-[var(--muted-foreground)]">
-            <span className="text-xs font-semibold uppercase tracking-wider">Active Trackers</span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-sky-500/15 text-sky-400 border border-sky-500/30 shadow-[0_0_10px_rgba(56,189,248,0.2)]">
+            <span className="text-xs font-semibold text-slate-400">Active Trackers</span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20">
               <Plane className="h-4 w-4" />
             </div>
           </div>
@@ -178,14 +178,14 @@ export default async function DashboardPage({
             <span className="text-2xl sm:text-3xl font-extrabold tabular-nums text-[var(--foreground)]">
               {currentActive}
             </span>
-            <span className="text-xs font-semibold text-[var(--muted-foreground)]">
+            <span className="text-xs font-semibold text-slate-500">
               / {isUnlimited ? "∞" : effectiveLimit}
             </span>
             <span className="text-xs font-semibold text-emerald-400 flex items-center ml-auto">
-              ↑ live
+              ● live
             </span>
           </div>
-          <p className="text-[11px] text-[var(--muted-foreground)] truncate">
+          <p className="text-[11px] text-slate-400 truncate">
             {isUnlimited
               ? `${totalCount ?? 0} total · uncapped quota`
               : `${remaining} remaining · ${totalCount ?? 0} total`}
@@ -193,10 +193,10 @@ export default async function DashboardPage({
         </div>
 
         {/* Metric 2: Price Drops Sent */}
-        <div className="glass-card-interactive rounded-2xl p-4 sm:p-5 space-y-2.5">
+        <div className="rounded-2xl border border-[var(--border)] bg-[#0b1120] p-4 sm:p-5 space-y-2.5 shadow-sm hover:border-sky-500/30 transition-all">
           <div className="flex items-center justify-between text-[var(--muted-foreground)]">
-            <span className="text-xs font-semibold uppercase tracking-wider">Price Drops</span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500/15 text-amber-400 border border-amber-500/30 shadow-[0_0_10px_rgba(245,158,11,0.2)]">
+            <span className="text-xs font-semibold text-slate-400">Price Drops</span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
               <TrendingDown className="h-4 w-4" />
             </div>
           </div>
@@ -204,18 +204,18 @@ export default async function DashboardPage({
             <span className="text-2xl sm:text-3xl font-extrabold tabular-nums text-amber-400">
               {dropsCount ?? 0}
             </span>
-            <span className="text-xs text-[var(--muted-foreground)]">alerts sent</span>
+            <span className="text-xs text-slate-400">alerts sent</span>
           </div>
-          <p className="text-[11px] text-[var(--muted-foreground)] truncate">
-            Telegram instant notifications
+          <p className="text-[11px] text-slate-400 truncate">
+            Telegram &amp; email notifications
           </p>
         </div>
 
-        {/* Metric 3: Alerts Sent */}
-        <div className="glass-card-interactive rounded-2xl p-4 sm:p-5 space-y-2.5">
+        {/* Metric 3: Scan Engine */}
+        <div className="rounded-2xl border border-[var(--border)] bg-[#0b1120] p-4 sm:p-5 space-y-2.5 shadow-sm hover:border-sky-500/30 transition-all">
           <div className="flex items-center justify-between text-[var(--muted-foreground)]">
-            <span className="text-xs font-semibold uppercase tracking-wider">Scan Engine</span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.2)]">
+            <span className="text-xs font-semibold text-slate-400">Scan Cycle</span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
               <CheckCircle2 className="h-4 w-4" />
             </div>
           </div>
@@ -227,16 +227,16 @@ export default async function DashboardPage({
               active
             </span>
           </div>
-          <p className="text-[11px] text-[var(--muted-foreground)] truncate">
-            Automated cron cycles
+          <p className="text-[11px] text-slate-400 truncate">
+            Automated background checks
           </p>
         </div>
 
         {/* Metric 4: Best Deal */}
-        <div className="glass-card-interactive rounded-2xl p-4 sm:p-5 space-y-2.5">
+        <div className="rounded-2xl border border-[var(--border)] bg-[#0b1120] p-4 sm:p-5 space-y-2.5 shadow-sm hover:border-sky-500/30 transition-all">
           <div className="flex items-center justify-between text-[var(--muted-foreground)]">
-            <span className="text-xs font-semibold uppercase tracking-wider">Best Deal</span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 shadow-[0_0_10px_rgba(6,182,212,0.2)]">
+            <span className="text-xs font-semibold text-slate-400">Lowest Recorded</span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-sky-500/10 text-sky-400 border border-sky-500/20">
               <PlaneTakeoff className="h-4 w-4" />
             </div>
           </div>
@@ -246,12 +246,12 @@ export default async function DashboardPage({
                 ? formatCurrency(lowestFareTracker.last_seen_price, lowestFareTracker.currency)
                 : "₹6,422"}
             </span>
-            <span className="text-xs text-[var(--muted-foreground)] uppercase">
+            <span className="text-xs text-slate-400 uppercase font-mono">
               {lowestFareTracker ? `${lowestFareTracker.origin}→${lowestFareTracker.destination}` : "DEL→BOM"}
             </span>
           </div>
-          <p className="text-[11px] text-[var(--muted-foreground)] truncate">
-            Lowest recorded in your radar
+          <p className="text-[11px] text-slate-400 truncate">
+            Lowest fare in your radar
           </p>
         </div>
       </div>

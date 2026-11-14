@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { signOutAction } from "@/app/dashboard/actions";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
+import { AeroDropLogo } from "@/components/brand/aerodrop-logo";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAutoHideHeader } from "@/hooks/use-auto-hide-header";
@@ -99,19 +100,11 @@ export function AdminShell({ profile, children }: AdminShellProps) {
               )}
               title="AeroDrop Admin Console"
             >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500 via-orange-600 to-red-600 text-white shadow-[0_0_20px_rgba(245,158,11,0.35)] group-hover:shadow-[0_0_25px_rgba(245,158,11,0.5)] transition-all">
-                <Shield className="h-5 w-5" />
-              </div>
-              {!isCollapsed && (
-                <div className="flex flex-col animate-in fade-in duration-200">
-                  <span className="text-base font-extrabold tracking-tight text-[var(--foreground)] leading-tight">
-                    AeroDrop
-                  </span>
-                  <span className="text-[10px] font-bold tracking-widest uppercase text-amber-400">
-                    Admin Console
-                  </span>
-                </div>
-              )}
+              <AeroDropLogo
+                variant={isCollapsed ? "mark" : "full"}
+                size={isCollapsed ? "sm" : "md"}
+                subtitle="ADMIN CONSOLE"
+              />
             </Link>
           </div>
 
@@ -239,17 +232,7 @@ export function AdminShell({ profile, children }: AdminShellProps) {
                   onClick={() => setMobileOpen(false)}
                   className="flex items-center gap-3 group"
                 >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500 via-orange-600 to-red-600 text-white shadow-[0_0_20px_rgba(245,158,11,0.35)]">
-                    <Shield className="h-5 w-5" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-base font-extrabold tracking-tight text-[var(--foreground)]">
-                      AeroDrop
-                    </span>
-                    <span className="text-[10px] font-bold tracking-widest uppercase text-amber-400">
-                      Admin Console
-                    </span>
-                  </div>
+                  <AeroDropLogo variant="full" size="md" subtitle="ADMIN CONSOLE" />
                 </Link>
 
                 <button

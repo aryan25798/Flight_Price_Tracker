@@ -15,6 +15,7 @@ import {
   Pause,
   Plane,
   Play,
+  Radio,
   Sparkles,
   Store,
   Tag,
@@ -105,10 +106,10 @@ export function TrackersTable({
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="space-y-1">
               <div className="flex items-center gap-2.5">
-                <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-[0_0_12px_rgba(16,185,129,0.2)]">
-                  <Plane className="h-4 w-4 rotate-45" />
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  <Radio className="h-4 w-4" />
                 </span>
-                <CardTitle className="text-base sm:text-lg font-extrabold tracking-tight">
+                <CardTitle className="text-base sm:text-lg font-bold tracking-tight text-[var(--foreground)]">
                   Active Flight Trackers
                 </CardTitle>
               </div>
@@ -295,7 +296,7 @@ export function TrackersTable({
               <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-left text-sm">
                   <thead>
-                    <tr className="border-b border-[var(--border)] glass-surface-2/60 text-[11px] font-bold uppercase tracking-wider text-[var(--muted-foreground)]">
+                    <tr className="border-b border-[var(--border)] bg-slate-900/60 text-xs font-semibold text-slate-400">
                       <th className="py-3 px-5">Route</th>
                       <th className="py-3 px-4">Departure / Return</th>
                       <th className="py-3 px-4">Target Alert</th>
