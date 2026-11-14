@@ -27,7 +27,10 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "AeroDrop — Automated Flight Price Drop Tracker",
+  title: {
+    default: "AeroDrop — Autonomous Flight Price Radar",
+    template: "%s · AeroDrop",
+  },
   description:
     "Monitor flight fares automatically and receive instant Telegram alerts when prices drop below your target.",
   manifest: "/manifest.webmanifest",
@@ -38,11 +41,13 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "/favicon.ico", sizes: "32x32" },
       { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico", sizes: "any" },
     ],
-    apple: "/icons/icon-192.svg",
-    shortcut: "/favicon.ico",
+    apple: [
+      { url: "/icons/icon-192.svg", sizes: "192x192", type: "image/svg+xml" },
+    ],
+    shortcut: "/icon.svg",
   },
 };
 
