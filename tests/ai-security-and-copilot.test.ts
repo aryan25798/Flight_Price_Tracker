@@ -215,6 +215,13 @@ describe("AeroDrop AI 2.0 Security, Database Access & Copilot Suite", () => {
     expect(formatted).not.toContain("Now we have origin DEL");
     expect(formatted).not.toContain("Use tool.");
     expect(formatted).toContain("Cheapest one-way flight from Delhi (DEL) to Pune (PNQ)");
+
+    // Test leaked model self-dialogue preamble (e.g. "User just says hi. Need to respond politely, ask how can help.")
+    const leakedDialogue = `User just says hi. Need to respond politely, ask how can help.Hello! 👏 How can I help you with flight searches, price-drop tracking, or savings insights today?`;
+    const cleanedDialogue = formatChatContent(leakedDialogue);
+    expect(cleanedDialogue).not.toContain("User just says hi");
+    expect(cleanedDialogue).not.toContain("Need to respond politely");
+    expect(cleanedDialogue).toBe("Hello! 👏 How can I help you with flight searches, price-drop tracking, or savings insights today?");
   });
 
   it("formats collapsed ASCII pipe tables into clean, structured bullet cards (Image 1 fix)", () => {

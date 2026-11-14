@@ -54,7 +54,10 @@ export function formatChatContent(content: string): string {
   if (!content) return "";
   let text = content;
 
-  // 0. Strip internal tool thoughts or leaked model reasoning preambles (e.g. "Now we have origin... Use tool.")
+  // 0. Strip internal tool thoughts or leaked model reasoning preambles (e.g. "User just says hi. Need to respond politely, ask how can help.")
+  text = text.replace(/^User\s+(?:just\s+)?(?:says|asks|is asking|typed|wants|greets)[^.!?]*\.\s*(?:Need to|Should|Must|I will|Let me)?[^.!?]*\.\s*(?=[A-Z])/i, "");
+  text = text.replace(/^(?:User just says [^.]*\.\s*)+/i, "");
+  text = text.replace(/^(?:Thinking|Scratchpad|Internal Plan|Plan):[\s\S]*?\n*/i, "");
   text = text.replace(/^(?:Now we have|Thinking:|Let me check|Need to [a-z0-9_]+|Use tool)[\s\S]*?(?:Use tool\.?|tool\.)\s*/i, "");
 
   // 1. Strip orphan raw token fragments or long affiliate tracking hashes
