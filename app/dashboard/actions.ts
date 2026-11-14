@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { createClient, getAuthenticatedProfile } from "@/lib/supabase/server";
 import { CreateTrackerSchema } from "@/lib/validations/tracker";
 import { buildTrackerCreatedEmail, sendEmail } from "@/lib/email/smtp";
+import { sendTelegramAlert } from "@/lib/telegram/server";
+import { sendPushToUser } from "@/lib/push/server";
 
 export interface ActionResult {
   ok: boolean;
@@ -54,7 +56,7 @@ export async function createTrackerAction(rawInput: unknown): Promise<ActionResu
   }
 
   // Dispatch email notification to user via SMTP if configured
-  const { user } = await getAuthenticatedProfile();
+  const { user, profile } = await getAuthenticatedProfile();
   
   // Record in-app notification confirming tracker activation
   await supabase
@@ -83,6 +85,27 @@ export async function createTrackerAction(rawInput: unknown): Promise<ActionResu
       }),
     }).catch(() => {});
   }
+
+  // Instant Telegram notification on tracker creation
+  if (profile.telegram_chat_id) {
+    const text = [
+      "✈️ <b>RADAR TRACKER ACTIVATED</b>",
+      "",
+      `Route: <b>${v.origin} → ${v.destination}</b>`,
+      `Departure: <b>${v.departureDate}</b>${v.returnDate ? ` (Return: <b>${v.returnDate}</b>)` : ""}`,
+      `Target Price: <b>${v.currency} ${Number(v.targetPrice).toLocaleString()}</b>`,
+      "",
+      "AeroDrop's automated radar is now monitoring this route every 4 hours. You will receive an instant alert here the moment fares drop below your target!",
+    ].join("\n");
+    sendTelegramAlert({ chatId: profile.telegram_chat_id, text }).catch(() => {});
+  }
+
+  // Native Browser Push Notification
+  sendPushToUser(user.id, {
+    title: "✈️ Radar Tracker Activated",
+    body: `${v.origin} → ${v.destination} · Alert target: ${v.currency} ${Number(v.targetPrice).toLocaleString()}`,
+    url: "/dashboard",
+  }).catch(() => {});
 
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/trackers");
@@ -157,8 +180,15 @@ export async function toggleTrackerAction(
   trackerId: string,
   nextActive: boolean,
 ): Promise<ActionResult> {
-  const { user } = await getAuthenticatedProfile();
+  const { user, profile } = await getAuthenticatedProfile();
   const supabase = await createClient();
+
+  const { data: tracker } = await supabase
+    .from("tracked_flights")
+    .select("origin, destination, departure_date, currency, target_price")
+    .eq("id", trackerId)
+    .eq("user_id", user.id)
+    .single();
 
   const { error } = await supabase
     .from("tracked_flights")
@@ -170,6 +200,34 @@ export async function toggleTrackerAction(
     return { ok: false, message: "Failed to update tracker status" };
   }
 
+  // Instant Telegram notification on pause / resume
+  if (profile.telegram_chat_id && tracker) {
+    const statusEmoji = nextActive ? "▶️" : "⏸️";
+    const statusTitle = nextActive ? "TRACKER RESUMED" : "TRACKER PAUSED";
+    const statusDesc = nextActive
+      ? "Flight radar monitoring is active again. Next 4-hour cycle will check live fares."
+      : "Flight radar monitoring is paused. Background checks for this route are suspended.";
+    const text = [
+      `${statusEmoji} <b>${statusTitle}</b>`,
+      "",
+      `Route: <b>${tracker.origin} → ${tracker.destination}</b>`,
+      `Departure: <b>${tracker.departure_date}</b>`,
+      `Target Alert: <b>${tracker.currency} ${Number(tracker.target_price).toLocaleString()}</b>`,
+      "",
+      statusDesc,
+    ].join("\n");
+    sendTelegramAlert({ chatId: profile.telegram_chat_id, text }).catch(() => {});
+  }
+
+  // Native Browser Push Notification
+  if (tracker) {
+    sendPushToUser(user.id, {
+      title: nextActive ? "▶️ Tracker Resumed" : "⏸️ Tracker Paused",
+      body: `${tracker.origin} → ${tracker.destination} (${tracker.departure_date})`,
+      url: "/dashboard/trackers",
+    }).catch(() => {});
+  }
+
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/trackers");
   return {
@@ -179,8 +237,15 @@ export async function toggleTrackerAction(
 }
 
 export async function deleteTrackerAction(trackerId: string): Promise<ActionResult> {
-  const { user } = await getAuthenticatedProfile();
+  const { user, profile } = await getAuthenticatedProfile();
   const supabase = await createClient();
+
+  const { data: tracker } = await supabase
+    .from("tracked_flights")
+    .select("origin, destination, departure_date, currency, target_price")
+    .eq("id", trackerId)
+    .eq("user_id", user.id)
+    .single();
 
   const { error } = await supabase
     .from("tracked_flights")
@@ -190,6 +255,27 @@ export async function deleteTrackerAction(trackerId: string): Promise<ActionResu
 
   if (error) {
     return { ok: false, message: "Failed to delete tracker" };
+  }
+
+  // Instant Telegram notification on tracker deletion
+  if (profile.telegram_chat_id && tracker) {
+    const text = [
+      "🗑️ <b>TRACKER REMOVED</b>",
+      "",
+      `Route: <b>${tracker.origin} → ${tracker.destination}</b> (${tracker.departure_date})`,
+      "",
+      "This route has been permanently removed from your active radar tracking.",
+    ].join("\n");
+    sendTelegramAlert({ chatId: profile.telegram_chat_id, text }).catch(() => {});
+  }
+
+  // Native Browser Push Notification
+  if (tracker) {
+    sendPushToUser(user.id, {
+      title: "🗑️ Tracker Removed",
+      body: `${tracker.origin} → ${tracker.destination} (${tracker.departure_date})`,
+      url: "/dashboard/trackers",
+    }).catch(() => {});
   }
 
   revalidatePath("/dashboard");

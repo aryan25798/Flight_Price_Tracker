@@ -1,7 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/shared/theme-provider";
+import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register";
 import "./globals.css";
 
 const sansFont = Plus_Jakarta_Sans({
@@ -18,15 +19,29 @@ const monoFont = JetBrains_Mono({
   weight: ["500", "600", "700"],
 });
 
+export const viewport: Viewport = {
+  themeColor: "#0284c7",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+};
+
 export const metadata: Metadata = {
   title: "AeroDrop — Automated Flight Price Drop Tracker",
   description:
     "Monitor flight fares automatically and receive instant Telegram alerts when prices drop below your target.",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "AeroDrop",
+  },
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "32x32" },
       { url: "/icon.svg", type: "image/svg+xml" },
     ],
+    apple: "/icons/icon-192.svg",
     shortcut: "/favicon.ico",
   },
 };
@@ -41,6 +56,7 @@ export default function RootLayout({
       <body className="font-sans antialiased selection:bg-sky-500/25 selection:text-sky-200">
         <ThemeProvider>
           {children}
+          <ServiceWorkerRegister />
           <Toaster richColors position="top-right" />
         </ThemeProvider>
       </body>

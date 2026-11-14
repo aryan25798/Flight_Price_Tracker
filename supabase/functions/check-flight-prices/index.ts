@@ -445,8 +445,8 @@ Deno.serve(async (req: Request) => {
                     tgMessageId = tgResult.messageId ?? null;
                   }
 
-                  // Dispatch Custom SMTP Email for price drops if email is configured
-                  if (email && decision.type === "price_drop") {
+                  // Dispatch Custom SMTP Email for price drops or 4-hour routine radar updates
+                  if (email && (decision.type === "price_drop" || decision.type === "status_update")) {
                     try {
                       const appUrl =
                         Deno.env.get("APP_URL") ||
@@ -464,7 +464,7 @@ Deno.serve(async (req: Request) => {
                         },
                         body: JSON.stringify({
                           to: email,
-                          type: "price_drop",
+                          type: decision.type,
                           data: {
                             origin: tracker.origin,
                             destination: tracker.destination,

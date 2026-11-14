@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import {
   buildPriceDropEmail,
+  buildRoutineStatusUpdateEmail,
   buildTrackerCreatedEmail,
   sendEmail,
 } from "@/lib/email/smtp";
@@ -38,6 +39,19 @@ export async function POST(request: Request) {
     if (type === "price_drop") {
       subject = `🚨 Urgent Price Drop Alert: ${data.origin} → ${data.destination} (${data.currency} ${Number(data.currentPrice).toLocaleString()})`;
       html = buildPriceDropEmail({
+        origin: data.origin,
+        destination: data.destination,
+        departureDate: data.departureDate,
+        returnDate: data.returnDate,
+        airline: data.airline,
+        currentPrice: Number(data.currentPrice),
+        targetPrice: Number(data.targetPrice),
+        currency: data.currency,
+        bookingUrl: data.bookingUrl,
+      });
+    } else if (type === "status_update") {
+      subject = `⏱️ 4-Hour Flight Radar Update: ${data.origin} → ${data.destination} (${data.currency} ${Number(data.currentPrice).toLocaleString()})`;
+      html = buildRoutineStatusUpdateEmail({
         origin: data.origin,
         destination: data.destination,
         departureDate: data.departureDate,

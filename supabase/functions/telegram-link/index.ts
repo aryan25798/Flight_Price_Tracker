@@ -6,6 +6,11 @@ import { sendTelegramMessage, sha256Hex } from "../_shared/telegram.ts";
 const TelegramLinkRequestSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("generate_link") }),
   z.object({ action: z.literal("send_test") }),
+  z.object({
+    action: z.literal("send_message"),
+    chatId: z.string(),
+    text: z.string(),
+  }),
 ]);
 
 function generateRandomHexToken(byteLength = 24): string {
@@ -69,6 +74,14 @@ Deno.serve(async (req: Request) => {
       deep_link: `https://t.me/${botUsername}?start=${token}`,
       expires_at: expiresAt,
     });
+  }
+
+  if (parsed.data.action === "send_message") {
+    if (parsed.data.chatId !== profile.telegram_chat_id && profile.role !== "super_admin") {
+      return errorResponse("Forbidden: Cannot dispatch to unverified chat", 403);
+    }
+    const res = await sendTelegramMessage(parsed.data.chatId, parsed.data.text);
+    return jsonResponse({ ok: res.ok, error: res.error });
   }
 
   // action === "send_test"
