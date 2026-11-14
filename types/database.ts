@@ -3,6 +3,15 @@ export type UserTier = "free" | "pro" | "enterprise";
 export type TripType = "one_way" | "round_trip";
 export type CabinClass = "economy" | "premium_economy" | "business" | "first";
 export type SupportedCurrency = "INR" | "USD" | "EUR" | "GBP" | "AED" | "SGD";
+export type Currency = SupportedCurrency;
+export type PriceReliabilityStatus =
+  | "LIVE_SEARCH_PRICE"
+  | "REVALIDATED_PRICE"
+  | "INDICATIVE_PRICE"
+  | "CACHED_PRICE"
+  | "EXPIRED_PRICE"
+  | "UNAVAILABLE"
+  | "UNKNOWN";
 export type RouteStatus = "active" | "paused" | "expired" | "failed";
 
 export interface Profile {

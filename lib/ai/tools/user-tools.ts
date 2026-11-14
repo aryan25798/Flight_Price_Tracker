@@ -3,6 +3,9 @@ import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Profile } from "@/types/database";
 import { fetchLiveFlightPrices } from "@/lib/flights/pricing-service";
+import { FlightSearchService } from "@/lib/flights/search-service";
+import { resolveAirportCode } from "@/lib/flights/airport-resolver";
+import { getTomorrowDateString } from "@/lib/dates/flight-datetime";
 import { formatCurrency } from "@/lib/utils";
 
 export interface UserToolContext {
@@ -70,11 +73,11 @@ export function buildUserTools(ctx: UserToolContext) {
     search_flights: tool({
       description: "Query real-time live airline fares and booking links for a specific origin, destination, and departure date.",
       inputSchema: z.object({
-        origin: z.string().trim().length(3).transform((s) => s.toUpperCase()).describe("3-letter IATA code of departure airport (e.g. DEL, BOM, LHR)"),
-        destination: z.string().trim().length(3).transform((s) => s.toUpperCase()).describe("3-letter IATA code of arrival airport (e.g. SIN, DXB, JFK)"),
-        departureDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).describe("Departure date in YYYY-MM-DD format"),
-        returnDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe("Optional return date in YYYY-MM-DD format"),
-        tripType: z.enum(["one_way", "round_trip"]).default("one_way"),
+        origin: z.string().trim().describe("3-letter IATA code or city name (e.g. DEL, BOM, Delhi, London)"),
+        destination: z.string().trim().describe("3-letter IATA code or city name (e.g. PAT, DXB, Patna, Bombay)"),
+        departureDate: z.string().optional().describe("Departure date in YYYY-MM-DD format (defaults to tomorrow if omitted)"),
+        returnDate: z.string().optional().describe("Optional return date in YYYY-MM-DD format"),
+        tripType: z.enum(["one_way", "round_trip", "one-way", "round-trip"]).default("one_way"),
         currency: z.enum(["INR", "USD", "EUR", "GBP", "AED", "SGD"]).default("INR"),
         directOnly: z.boolean().default(false).describe("Only return non-stop flights"),
       }),
@@ -89,63 +92,68 @@ export function buildUserTools(ctx: UserToolContext) {
       }: {
         origin: string;
         destination: string;
-        departureDate: string;
+        departureDate?: string;
         returnDate?: string;
-        tripType: "one_way" | "round_trip";
+        tripType: "one_way" | "round_trip" | "one-way" | "round-trip";
         currency: "INR" | "USD" | "EUR" | "GBP" | "AED" | "SGD";
         directOnly: boolean;
       }) => {
-        const quote = await fetchLiveFlightPrices({
-          origin,
-          destination,
-          departureDate,
-          returnDate: tripType === "round_trip" ? returnDate : undefined,
-          tripType,
+        const resolvedOrigin = resolveAirportCode(origin) || origin.trim().toUpperCase().slice(0, 3);
+        const resolvedDest = resolveAirportCode(destination) || destination.trim().toUpperCase().slice(0, 3);
+        const cleanDate = departureDate && /^\d{4}-\d{2}-\d{2}$/.test(departureDate)
+          ? departureDate
+          : getTomorrowDateString();
+
+        const normalizedTrip = tripType === "round_trip" || tripType === "round-trip" ? "round_trip" : "one_way";
+
+        const searchResult = await FlightSearchService.search({
+          origin: resolvedOrigin,
+          destination: resolvedDest,
+          departureDate: cleanDate,
+          returnDate: normalizedTrip === "round_trip" && returnDate ? returnDate : undefined,
+          tripType: normalizedTrip,
           currency,
           directOnly,
+          pageSize: 10,
         });
 
-        if (!quote || !quote.found) {
+        if (!searchResult || searchResult.offers.length === 0) {
           return {
             found: false,
-            message:
-              quote?.message ||
-              `No live airfares found for ${origin} → ${destination} on ${departureDate}.`,
-            comparisonSites: quote?.comparisonSites?.map((s) => ({
-              name: s.name,
-              url: s.url,
-            })),
+            message: `No active flight inventory found for ${resolvedOrigin} → ${resolvedDest} on ${cleanDate}.`,
+            comparisonSites: [
+              { name: "Google Flights", url: `https://www.google.com/travel/flights?q=Flights%20to%20${resolvedDest}%20from%20${resolvedOrigin}%20on%20${cleanDate}` },
+              { name: "Skyscanner", url: `https://www.skyscanner.com/transport/flights/${resolvedOrigin.toLowerCase()}/${resolvedDest.toLowerCase()}/` },
+              { name: "MakeMyTrip", url: `https://www.makemytrip.com/flight/search?itinerary=${resolvedOrigin}-${resolvedDest}-${cleanDate}&tripType=O&paxType=A-1_C-0_I-0&intl=false&cabinClass=E` },
+            ],
           };
         }
 
-        const topOption = quote.options?.[0];
+        const topOption = searchResult.offers[0];
 
         return {
           found: true,
-          bestPrice: quote.bestPrice ? formatCurrency(quote.bestPrice, quote.currency || currency) : null,
-          airline: topOption?.airline || "Available Airlines",
-          bookingUrl: topOption?.bookingUrl || null,
-          optionsCount: quote.options?.length ?? 0,
-          topOptions: (quote.options ?? []).slice(0, 5).map((opt) => ({
+          bestPrice: topOption.formattedPrice,
+          airline: topOption.airline,
+          bookingUrl: topOption.bookingUrl,
+          optionsCount: searchResult.totalOffers,
+          topOptions: searchResult.offers.slice(0, 5).map((opt) => ({
             airline: opt.airline,
             flightNumber: opt.flightNumber,
-            price: formatCurrency(opt.price, opt.currency),
-            departureDate: opt.departureDateOnly,
-            departureTime: opt.departureTimeLocal,
-            arrivalDate: opt.arrivalDateOnly,
-            arrivalTime: opt.arrivalTimeLocal,
+            price: opt.formattedPrice,
+            departureDate: opt.departureDate,
+            departureTime: opt.departureTime,
+            arrivalDate: opt.arrivalDate,
+            arrivalTime: opt.arrivalTime,
             duration: opt.durationFormatted,
-            isDirect: opt.isDirect,
+            stops: opt.stopsLabel,
             isOvernight: opt.isOvernight,
             dayDifference: opt.dayDifference > 0 ? `+${opt.dayDifference}` : "Same day",
-            priceStatus: opt.priceStatus,
+            priceStatus: opt.priceStatusLabel,
             seller: opt.seller,
             bookingUrl: opt.bookingUrl,
           })),
-          comparisonSites: quote.comparisonSites?.map((s) => ({
-            name: s.name,
-            url: s.url,
-          })),
+          comparisonSites: topOption.comparisonSites,
         };
       },
     }),
@@ -242,13 +250,13 @@ export function buildUserTools(ctx: UserToolContext) {
     create_tracker: tool({
       description: "Propose creating a new automated flight price tracker. Always presents a confirmation proposal to the user before mutating database.",
       inputSchema: z.object({
-        origin: z.string().trim().length(3).transform((s) => s.toUpperCase()).describe("3-letter IATA departure code"),
-        destination: z.string().trim().length(3).transform((s) => s.toUpperCase()).describe("3-letter IATA destination code"),
+        origin: z.string().trim().describe("3-letter IATA departure code or city name (e.g. DEL, Patna)"),
+        destination: z.string().trim().describe("3-letter IATA destination code or city name (e.g. PAT, Delhi)"),
         departureDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).describe("Departure date in YYYY-MM-DD"),
-        returnDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe("Return date for round-trips"),
-        tripType: z.enum(["one_way", "round_trip"]).default("one_way"),
+        returnDate: z.string().optional().describe("Return date for round-trips (YYYY-MM-DD)"),
+        tripType: z.enum(["one_way", "round_trip", "one-way", "round-trip"]).default("one_way"),
         currency: z.enum(["INR", "USD", "EUR", "GBP", "AED", "SGD"]).default("INR"),
-        targetPrice: z.number().positive().describe("Alert threshold price in selected currency"),
+        targetPrice: z.coerce.number().positive().describe("Alert threshold price in selected currency"),
       }),
       execute: async ({
         origin,
@@ -263,26 +271,30 @@ export function buildUserTools(ctx: UserToolContext) {
         destination: string;
         departureDate: string;
         returnDate?: string;
-        tripType: "one_way" | "round_trip";
+        tripType: "one_way" | "round_trip" | "one-way" | "round-trip";
         currency: "INR" | "USD" | "EUR" | "GBP" | "AED" | "SGD";
         targetPrice: number;
       }) => {
+        const resolvedOrigin = resolveAirportCode(origin) || origin.trim().toUpperCase().slice(0, 3);
+        const resolvedDest = resolveAirportCode(destination) || destination.trim().toUpperCase().slice(0, 3);
+        const normalizedTrip = tripType === "round_trip" || tripType === "round-trip" ? "round_trip" : "one_way";
+
         return {
           type: "action_proposal",
           action: "create_tracker",
           requiresUserConfirmation: true,
           details: {
-            origin,
-            destination,
+            origin: resolvedOrigin,
+            destination: resolvedDest,
             departureDate,
-            returnDate: tripType === "round_trip" ? returnDate : null,
-            tripType,
+            returnDate: normalizedTrip === "round_trip" && returnDate ? returnDate : null,
+            tripType: normalizedTrip,
             currency,
             targetPrice,
             formattedTargetPrice: formatCurrency(targetPrice, currency),
             userEmail: ctx.user.email,
           },
-          confirmationMessage: `Please confirm activating radar tracking for ${origin} → ${destination} on ${departureDate} with an alert target of ${formatCurrency(targetPrice, currency)}.`,
+          confirmationMessage: `Please confirm activating radar tracking for ${resolvedOrigin} → ${resolvedDest} on ${departureDate} with an alert target of ${formatCurrency(targetPrice, currency)}.`,
         };
       },
     }),

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { createTrackerAction, deleteTrackerAction } from "@/app/dashboard/actions";
 import { adminActionDispatch } from "@/app/admin/actions";
+import { resolveAirportCode } from "@/lib/flights/airport-resolver";
 
 export interface ActionProposal {
   type: "action_proposal";
@@ -73,9 +74,12 @@ export function AIActionCard({
             ? d.targetPrice
             : Number(String(d.targetPrice || "0").replace(/[^0-9.]/g, ""));
 
+        const resolvedOrigin = resolveAirportCode(d.origin) || (d.origin || "").trim().toUpperCase().slice(0, 3);
+        const resolvedDest = resolveAirportCode(d.destination) || (d.destination || "").trim().toUpperCase().slice(0, 3);
+
         const res = await createTrackerAction({
-          origin: (d.origin || "").trim().toUpperCase(),
-          destination: (d.destination || "").trim().toUpperCase(),
+          origin: resolvedOrigin,
+          destination: resolvedDest,
           departureDate: d.departureDate,
           returnDate: tripType === "round_trip" && d.returnDate ? d.returnDate : undefined,
           tripType,

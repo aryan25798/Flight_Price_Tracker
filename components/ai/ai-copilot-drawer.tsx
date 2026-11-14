@@ -244,18 +244,23 @@ export function AICopilotDrawer({
 
               try {
                 const parsed = JSON.parse(payload);
-                if (parsed.type === "text-delta" && typeof parsed.delta === "string") {
-                  assistantContent += parsed.delta;
+                const textDelta =
+                  typeof parsed.delta === "string"
+                    ? parsed.delta
+                    : typeof parsed.textDelta === "string"
+                    ? parsed.textDelta
+                    : typeof parsed.text === "string"
+                    ? parsed.text
+                    : null;
+
+                if (textDelta) {
+                  assistantContent += textDelta;
                 } else if (
-                  parsed.type === "tool-output-available" &&
-                  parsed.output?.type === "action_proposal"
+                  (parsed.type === "tool-output-available" || parsed.type === "tool-result") &&
+                  (parsed.output?.type === "action_proposal" || parsed.result?.type === "action_proposal")
                 ) {
-                  foundProposals.push(parsed.output as ActionProposal);
-                } else if (
-                  parsed.type === "tool-result" &&
-                  parsed.result?.type === "action_proposal"
-                ) {
-                  foundProposals.push(parsed.result as ActionProposal);
+                  const proposal = (parsed.output || parsed.result) as ActionProposal;
+                  foundProposals.push(proposal);
                 } else if (parsed.type === "error") {
                   setErrorText(parsed.errorText || "AI processing error.");
                   if (!assistantContent) {
@@ -303,7 +308,7 @@ export function AICopilotDrawer({
       if (!assistantContent && foundProposals.length > 0) {
         assistantContent = "I have prepared the following flight action proposal based on your request. Please review and confirm below:";
       } else if (!assistantContent) {
-        assistantContent = "I checked your flight radar and active data. What route, fare, or destination would you like me to analyze?";
+        assistantContent = "I analyzed your request. To look up live airline fares or set up an autonomous price radar, please share your travel date (e.g., tomorrow or YYYY-MM-DD) and your target alert price.";
       }
 
       setMessages((prev) =>

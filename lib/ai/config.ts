@@ -8,13 +8,13 @@
 
 export const AI_CONFIG = {
   // Google AI Studio Production Flash Models
-  defaultModel: "gemini-3.5-flash-lite",
-  fallbackModel: "gemini-3.5-flash",
+  defaultModel: "gemini-2.0-flash",
+  fallbackModel: "gemini-1.5-flash",
   providerName: "google",
 
   // Groq LPU Free Tier High-Speed Models
-  groqModel: "openai/gpt-oss-120b",
-  groqFastModel: "openai/gpt-oss-20b",
+  groqModel: "llama-3.3-70b-versatile",
+  groqFastModel: "llama-3.1-8b-instant",
   
   // Rate & Token Guardrails
   maxOutputTokens: 1024,
