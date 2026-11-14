@@ -14,7 +14,8 @@ class AIProviderRegistry {
   public getGoogleClient() {
     if (this.googleInstance) return this.googleInstance;
 
-    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+    const rawKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY || "";
+    const apiKey = rawKey.replace(/^["']|["']$/g, "").trim();
     if (!apiKey) {
       console.warn(
         "AeroDrop AI: Neither GEMINI_API_KEY nor GOOGLE_GENERATIVE_AI_API_KEY is configured in the environment."
