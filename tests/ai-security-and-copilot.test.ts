@@ -3,6 +3,7 @@ import { buildUserTools } from "@/lib/ai/tools/user-tools";
 import { buildAdminTools } from "@/lib/ai/tools/admin-tools";
 import { AI_CONFIG, USER_COPILOT_SYSTEM_PROMPT, ADMIN_COPILOT_SYSTEM_PROMPT } from "@/lib/ai/config";
 import { SlidingWindowRateLimiter } from "@/lib/rate-limiter";
+import { formatChatContent } from "@/components/ai/ai-copilot-drawer";
 import type { Profile } from "@/types/database";
 
 describe("AeroDrop AI 2.0 Security, Database Access & Copilot Suite", () => {
@@ -201,5 +202,69 @@ describe("AeroDrop AI 2.0 Security, Database Access & Copilot Suite", () => {
     expect(AI_CONFIG.temperature).toBeLessThanOrEqual(0.3);
     expect(AI_CONFIG.maxToolHopsPerTurn).toBe(4);
     expect(AI_CONFIG.rateLimits.rpmPerUser).toBe(10);
+  });
+
+  it("formats collapsed ASCII pipe tables into clean, structured bullet cards (Image 1 fix)", () => {
+    const rawMess = `Sure! I can set up a price-drop tracker for you. I’ll need a few details:
+
+| Detail | What I need ||--------|-------------|| Origin airport (3-letter IATA) | e.g., DEL, LHR || Destination airport (3-letter IATA) | e.g., SIN, JFK || Departure date (YYYY-MM-DD) || Trip type – one-way or round-trip || Return date (if round-trip, YYYY-MM-DD) || Target price (the price you’d like to be alerted at) || Currency – INR, USD, EUR, GBP, AED, SGD (default INR) | optional |
+
+Please provide the missing information.`;
+
+    const formatted = formatChatContent(rawMess);
+
+    // Assert that raw pipes are removed and replaced by clean structured bullets
+    expect(formatted).not.toContain("||--------|-------------||");
+    expect(formatted).toContain("• **Origin airport (3-letter IATA)**: e.g., DEL, LHR");
+    expect(formatted).toContain("• **Destination airport (3-letter IATA)**: e.g., SIN, JFK");
+    expect(formatted).toContain("• **Departure date (YYYY-MM-DD)**");
+    expect(formatted).toContain("• **Target price (the price you’d like to be alerted at)**");
+  });
+
+  it("converts raw bulleted comparison URLs into clean markdown links and strips token hashes (Image 3 fix)", () => {
+    const rawUrls = `2ea3-8040-a76c-efedb5fb7b29&static_fare_key=TY%7CP0%7CH1%7CL0%7CCH0%7CR0%7CTBC0&itinerary_key=a-X0qxkr2fzoN_NVrVb2Hg
+Quick comparison sites (for alternative offers):
+• Google Flights:
+https://www.google.com/travel/flights?q=Flights%20to%20PAT%20from%20DEL%20on%202026-11-24
+• Skyscanner:
+https://www.skyscanner.co.in/transport/flights/del/pat/261124/?adultsv2=1&cabinclass=economy
+• MakeMyTrip:
+https://www.makemytrip.com/flight/search?itinerary=DEL-PAT-24/11/2026`;
+
+    const formatted = formatChatContent(rawUrls);
+
+    expect(formatted).not.toContain("2ea3-8040-a76c-efedb5fb7b29&static_fare_key=");
+    expect(formatted).toContain("[Compare on Google Flights](https://www.google.com/travel/flights?q=Flights%20to%20PAT%20from%20DEL%20on%202026-11-24)");
+    expect(formatted).toContain("[Compare on Skyscanner](https://www.skyscanner.co.in/transport/flights/del/pat/261124/?adultsv2=1&cabinclass=economy)");
+    expect(formatted).toContain("[Compare on MakeMyTrip](https://www.makemytrip.com/flight/search?itinerary=DEL-PAT-24/11/2026)");
+  });
+
+  it("handles exact flight tracking parameters in create_tracker proposal (Phase 6)", async () => {
+    const mockSupabase = { from: vi.fn() };
+    const tools = buildUserTools({
+      user: mockUser,
+      profile: mockProfile,
+      supabase: mockSupabase as any,
+    });
+
+    const proposal = await (tools.create_tracker.execute as any)({
+      origin: "delhi",
+      destination: "patna",
+      departureDate: "2026-11-20",
+      targetPrice: 6500,
+      trackingMode: "exact_flight",
+      flightNumber: "6E-6245",
+      airlineCode: "6E",
+      airlineName: "IndiGo",
+      departureTime: "06:20",
+      arrivalTime: "08:00",
+    });
+
+    expect(proposal.type).toBe("action_proposal");
+    expect(proposal.details.trackingMode).toBe("exact_flight");
+    expect(proposal.details.flightNumber).toBe("6E-6245");
+    expect(proposal.details.airlineCode).toBe("6E");
+    expect(proposal.details.airlineName).toBe("IndiGo");
+    expect(proposal.confirmationMessage).toContain("6E-6245");
   });
 });

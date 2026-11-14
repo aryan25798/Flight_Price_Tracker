@@ -49,6 +49,53 @@ interface AICopilotDrawerProps {
   initialScope?: AIScope;
 }
 
+export function formatChatContent(content: string): string {
+  if (!content) return "";
+  let text = content;
+
+  // 1. Strip orphan raw token fragments or long affiliate tracking hashes
+  text = text.replace(/^[a-f0-9-]{16,}&[^\s\n]+/gm, "");
+
+  // 2. Transform raw pipe tables or collapsed pipe tables (| Detail | What I need ||... or | Col | Col |) into clean structured bullet lists
+  if (text.includes("||") || (text.includes("|") && text.includes("---"))) {
+    const lines = text.split("\n");
+    const processedLines: string[] = [];
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (line.includes("||") || (line.startsWith("|") && line.endsWith("|"))) {
+        const segments = line.split(/\|\|\s*/).map((s) => s.trim()).filter(Boolean);
+        for (const seg of segments) {
+          if (seg.includes("---") || /\|\s*(?:detail|what i need|field|attribute|parameter)\s*\|/i.test(seg)) {
+            continue;
+          }
+          const cells = seg
+            .split("|")
+            .map((c) => c.trim())
+            .filter(Boolean);
+
+          if (cells.length >= 2) {
+            processedLines.push(`• **${cells[0]}**: ${cells.slice(1).join(" — ")}`);
+          } else if (cells.length === 1) {
+            processedLines.push(`• **${cells[0]}**`);
+          }
+        }
+      } else {
+        processedLines.push(line);
+      }
+    }
+    text = processedLines.join("\n");
+  }
+
+  // 3. Convert bulleted portal links (e.g. • Google Flights:\nhttps://...) into clean markdown links
+  text = text.replace(
+    /(?:[•*-]\s*)?(Google Flights|Skyscanner|MakeMyTrip|EaseMyTrip|Kayak|Aviasales|Airline Direct):?\s*\n?\s*(https?:\/\/[^\s\)]+)/gi,
+    (_match, portal, url) => `• [Compare on ${portal}](${url})`
+  );
+
+  return text;
+}
+
 export function AICopilotDrawer({
   profile,
   isOpen,
@@ -80,10 +127,14 @@ export function AICopilotDrawer({
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
 
   const scrollToBottom = React.useCallback((behavior: ScrollBehavior = "smooth") => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTo({
+        top: scrollContainerRef.current.scrollHeight,
+        behavior,
+      });
+    }
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior, block: "end" });
-    } else if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
     }
   }, []);
 
@@ -361,15 +412,26 @@ export function AICopilotDrawer({
     ]);
   }
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200">
+    <div
+      className={cn(
+        "fixed inset-0 z-50 flex justify-end transition-opacity duration-200",
+        isOpen
+          ? "bg-slate-950/70 backdrop-blur-sm opacity-100 pointer-events-auto"
+          : "opacity-0 pointer-events-none"
+      )}
+      aria-hidden={!isOpen}
+    >
       {/* Click outside to close on mobile backdrop */}
       <div className="flex-1 hidden sm:block" onClick={onClose} aria-hidden="true" />
 
       {/* Slide-over Flyout Panel */}
-      <div className="flex flex-col w-full sm:w-[460px] md:w-[480px] h-full bg-[#080d1a]/95 backdrop-blur-2xl border-l border-white/10 shadow-[-10px_0_40px_rgba(0,0,0,0.6)] animate-in slide-in-from-right duration-200 overflow-hidden">
+      <div
+        className={cn(
+          "flex flex-col w-full sm:w-[460px] md:w-[480px] h-full bg-[#080d1a]/95 backdrop-blur-2xl border-l border-white/10 shadow-[-10px_0_40px_rgba(0,0,0,0.6)] overflow-hidden transition-transform duration-200 ease-in-out",
+          isOpen ? "translate-x-0" : "translate-x-full"
+        )}
+      >
         {/* Drawer Header */}
         <div className="shrink-0 flex items-center justify-between border-b border-white/10 px-4 py-3.5 bg-slate-950/80 backdrop-blur-xl">
           <div className="flex items-center gap-3">
@@ -481,27 +543,40 @@ export function AICopilotDrawer({
                                 textContent.length > 35;
 
                               let label = textContent;
-                              if (isRawUrl) {
-                                const lower = rawHref.toLowerCase();
-                                if (lower.includes("google.com/travel/flights") || lower.includes("google.com/flights")) {
-                                  label = "Compare on Google Flights";
-                                } else if (lower.includes("skyscanner")) {
-                                  label = "Compare on Skyscanner";
-                                } else if (lower.includes("makemytrip")) {
-                                  label = "Compare on MakeMyTrip";
-                                } else if (lower.includes("easemytrip")) {
-                                  label = "Compare on EaseMyTrip";
-                                } else if (lower.includes("aviasales")) {
-                                  label = "View Flight Deal on Aviasales";
-                                } else if (lower.includes("kayak")) {
-                                  label = "Compare on Kayak";
-                                } else {
-                                  try {
-                                    const u = new URL(rawHref);
-                                    label = `Open ${u.hostname.replace(/^www\./, "")}`;
-                                  } catch {
-                                    label = "View Flight Offer";
-                                  }
+                              let badgeStyle = "bg-sky-950/70 hover:bg-sky-900 border-sky-400/30 hover:border-sky-400 text-sky-300 hover:text-white";
+                              let iconColor = "text-sky-400";
+
+                              const lower = rawHref.toLowerCase();
+                              if (lower.includes("google.com/travel/flights") || lower.includes("google.com/flights")) {
+                                if (isRawUrl) label = "Compare on Google Flights";
+                                badgeStyle = "bg-blue-950/80 hover:bg-blue-900/90 border-blue-500/40 hover:border-blue-400 text-blue-300 hover:text-white";
+                                iconColor = "text-blue-400";
+                              } else if (lower.includes("skyscanner")) {
+                                if (isRawUrl) label = "Compare on Skyscanner";
+                                badgeStyle = "bg-sky-950/80 hover:bg-sky-900/90 border-sky-500/40 hover:border-sky-400 text-sky-300 hover:text-white";
+                                iconColor = "text-sky-400";
+                              } else if (lower.includes("makemytrip")) {
+                                if (isRawUrl) label = "Compare on MakeMyTrip";
+                                badgeStyle = "bg-rose-950/80 hover:bg-rose-900/90 border-rose-500/40 hover:border-rose-400 text-rose-300 hover:text-white";
+                                iconColor = "text-rose-400";
+                              } else if (lower.includes("easemytrip")) {
+                                if (isRawUrl) label = "Compare on EaseMyTrip";
+                                badgeStyle = "bg-emerald-950/80 hover:bg-emerald-900/90 border-emerald-500/40 hover:border-emerald-400 text-emerald-300 hover:text-white";
+                                iconColor = "text-emerald-400";
+                              } else if (lower.includes("kayak")) {
+                                if (isRawUrl) label = "Compare on Kayak";
+                                badgeStyle = "bg-amber-950/80 hover:bg-amber-900/90 border-amber-500/40 hover:border-amber-400 text-amber-300 hover:text-white";
+                                iconColor = "text-amber-400";
+                              } else if (lower.includes("aviasales")) {
+                                if (isRawUrl) label = "View Flight Deal on Aviasales";
+                                badgeStyle = "bg-indigo-950/80 hover:bg-indigo-900/90 border-indigo-500/40 hover:border-indigo-400 text-indigo-300 hover:text-white";
+                                iconColor = "text-indigo-400";
+                              } else if (isRawUrl) {
+                                try {
+                                  const u = new URL(rawHref);
+                                  label = `Open ${u.hostname.replace(/^www\./, "")}`;
+                                } catch {
+                                  label = "View Flight Offer";
                                 }
                               }
 
@@ -510,11 +585,14 @@ export function AICopilotDrawer({
                                   href={rawHref}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1.5 px-3 py-1 my-1 rounded-lg bg-sky-950/70 hover:bg-sky-900 border border-sky-400/30 hover:border-sky-400 text-sky-300 hover:text-white font-medium text-xs transition-all shadow-xs group no-underline"
+                                  className={cn(
+                                    "inline-flex items-center gap-1.5 px-3 py-1.5 my-1 rounded-xl border font-medium text-xs transition-all shadow-xs group no-underline",
+                                    badgeStyle
+                                  )}
                                 >
-                                  <Plane className="h-3 w-3 text-sky-400 group-hover:translate-x-0.5 transition-transform shrink-0" />
-                                  <span className="truncate max-w-[260px] sm:max-w-[320px]">{label}</span>
-                                  <ExternalLink className="h-3 w-3 text-sky-400/70 group-hover:text-sky-300 shrink-0 ml-0.5" />
+                                  <Plane className={cn("h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform shrink-0", iconColor)} />
+                                  <span className="truncate max-w-[240px] sm:max-w-[300px]">{label}</span>
+                                  <ExternalLink className="h-3 w-3 opacity-70 group-hover:opacity-100 shrink-0 ml-0.5" />
                                 </a>
                               );
                             },
@@ -599,7 +677,7 @@ export function AICopilotDrawer({
                             ),
                           }}
                         >
-                          {m.content.replace(/\|\s*\|\s*/g, "|\n| ")}
+                          {formatChatContent(m.content)}
                         </ReactMarkdown>
                       </div>
                     ) : m.role === "assistant" && loading ? (

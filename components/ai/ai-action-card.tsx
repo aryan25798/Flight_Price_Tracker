@@ -62,6 +62,14 @@ export function AIActionCard({
           children?: number;
           infants?: number;
           cabinClass?: "economy" | "premium_economy" | "business" | "first";
+          trackingMode?: "route" | "exact_flight";
+          flightNumber?: string | null;
+          airlineCode?: string | null;
+          airlineName?: string | null;
+          departureTime?: string | null;
+          arrivalTime?: string | null;
+          itineraryFingerprint?: string | null;
+          bookingUrl?: string | null;
         };
 
         const tripType =
@@ -89,6 +97,14 @@ export function AIActionCard({
           cabinClass: d.cabinClass || "economy",
           currency: (d.currency || "INR").trim().toUpperCase(),
           targetPrice: cleanPrice,
+          trackingMode: d.trackingMode || (d.flightNumber ? "exact_flight" : "route"),
+          flightNumber: d.flightNumber || undefined,
+          airlineCode: d.airlineCode || undefined,
+          airlineName: d.airlineName || undefined,
+          departureTime: d.departureTime || undefined,
+          arrivalTime: d.arrivalTime || undefined,
+          itineraryFingerprint: d.itineraryFingerprint || undefined,
+          bookingUrl: d.bookingUrl || undefined,
         });
 
         if (res.ok) {
@@ -149,6 +165,15 @@ export function AIActionCard({
       {/* Proposal Details Table/Badges */}
       {proposal.action === "create_tracker" && (
         <div className="grid grid-cols-2 gap-2 rounded-xl bg-[var(--muted)]/30 p-2.5 text-[11px]">
+          {Boolean(proposal.details.flightNumber) && (
+            <div className="col-span-2 rounded-lg bg-sky-950/60 border border-sky-500/20 px-2.5 py-1.5 flex items-center justify-between text-[11px]">
+              <span className="text-slate-400">Target Flight:</span>
+              <span className="font-mono font-bold text-sky-300">
+                {String(proposal.details.airlineName || "")} #{String(proposal.details.flightNumber)}
+                {proposal.details.departureTime ? ` (${String(proposal.details.departureTime)} dep)` : ""}
+              </span>
+            </div>
+          )}
           <div>
             <span className="text-[var(--muted-foreground)]">Route:</span>
             <p className="font-bold text-[var(--foreground)]">
