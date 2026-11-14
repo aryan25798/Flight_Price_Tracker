@@ -550,6 +550,8 @@ export function FlightSearchForm({
                 setValue("arrivalTime", offer.arrivalTime);
                 setValue("itineraryFingerprint", offer.itineraryFingerprint);
                 setValue("bookingUrl", offer.bookingUrl || "");
+                if (offer.terminal) setValue("terminal", offer.terminal);
+                if (offer.aircraft) setValue("aircraft", offer.aircraft);
                 const discounted = Math.max(1, Math.round(offer.price * 0.95));
                 setValue("targetPrice", discounted, { shouldValidate: true });
                 toast.success(
@@ -593,7 +595,11 @@ export function FlightSearchForm({
                     Tracking Exact Flight: {selectedOffer.airline} {selectedOffer.flightNumber}
                   </p>
                   <p className="text-[11px] text-slate-300 truncate">
-                    Departs {selectedOffer.departureTime} ({selectedOffer.originAirport}) → Arrives {selectedOffer.arrivalTime} ({selectedOffer.destinationAirport}) · {selectedOffer.formattedPrice}
+                    Departs {selectedOffer.departureTime} ({selectedOffer.originAirport}
+                    {selectedOffer.terminal ? ` ${selectedOffer.terminal}` : ""}) → Arrives{" "}
+                    {selectedOffer.arrivalTime} ({selectedOffer.destinationAirport})
+                    {selectedOffer.aircraft ? ` · ✈ ${selectedOffer.aircraft}` : ""} ·{" "}
+                    {selectedOffer.formattedPrice}
                   </p>
                 </div>
               </div>
@@ -611,6 +617,8 @@ export function FlightSearchForm({
                   setValue("arrivalTime", "");
                   setValue("itineraryFingerprint", "");
                   setValue("bookingUrl", "");
+                  setValue("terminal", "");
+                  setValue("aircraft", "");
                 }}
                 className="text-slate-400 hover:text-white text-[11px] h-8 shrink-0 rounded-lg hover:bg-white/10 cursor-pointer"
               >

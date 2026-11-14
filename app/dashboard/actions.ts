@@ -54,7 +54,13 @@ export async function createTrackerAction(rawInput: unknown): Promise<ActionResu
     p_itinerary_fingerprint: v.itineraryFingerprint || null,
     p_booking_url: v.bookingUrl || null,
     p_tracking_mode: v.trackingMode || (v.flightNumber ? "exact_flight" : "route"),
-    p_flight_details: null,
+    p_flight_details:
+      v.terminal || v.aircraft
+        ? {
+            terminal: v.terminal || null,
+            aircraft: v.aircraft || null,
+          }
+        : null,
   });
 
   if (error) {

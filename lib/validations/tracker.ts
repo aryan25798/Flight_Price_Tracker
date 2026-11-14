@@ -43,6 +43,8 @@ export const CreateTrackerSchema = z
     arrivalTime: z.string().trim().optional().nullable().or(z.literal("")),
     itineraryFingerprint: z.string().trim().optional().nullable().or(z.literal("")),
     bookingUrl: z.string().trim().optional().nullable().or(z.literal("")),
+    terminal: z.string().trim().optional().nullable().or(z.literal("")),
+    aircraft: z.string().trim().optional().nullable().or(z.literal("")),
   })
   .refine((data) => data.origin !== data.destination, {
     message: "Origin and destination airports must be different",

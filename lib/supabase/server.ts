@@ -50,7 +50,6 @@ export const getAuthenticatedProfile = cache(
         const pathname = headerList.get("x-pathname");
         if (
           pathname &&
-          pathname !== "/dashboard" &&
           pathname !== "/login" &&
           pathname.startsWith("/") &&
           !pathname.startsWith("//")

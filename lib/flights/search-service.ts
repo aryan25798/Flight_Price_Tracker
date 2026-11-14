@@ -2,6 +2,7 @@ import { fetchLiveFlightPrices, type FlightOption } from "./pricing-service";
 import { generateMultiSiteComparisonLinks } from "@/lib/flight-urls";
 import { AmadeusAdapter } from "./adapters/amadeus";
 import { SerpApiGoogleFlightsAdapter } from "./adapters/serpapi-google-flights";
+import { OAGAdapter } from "./adapters/oag";
 import {
   calculateFlightTimeline,
   validateFlightMatchesRequestedDate,
@@ -53,6 +54,11 @@ export interface FlightSegment {
   arrivalTime: string;
   durationMinutes: number;
   durationFormatted: string;
+  terminal?: string;
+  arrivalTerminal?: string;
+  aircraft?: string;
+  distanceKm?: number;
+  codeshares?: string[];
 }
 
 export interface NormalizedFlightOffer {
@@ -90,6 +96,11 @@ export interface NormalizedFlightOffer {
   dayDifference: number;
   score: number;
   isBestOverall?: boolean;
+  terminal?: string;
+  arrivalTerminal?: string;
+  aircraft?: string;
+  distanceKm?: number;
+  codeshares?: string[];
 }
 
 export interface SearchResultSnapshot {
@@ -410,6 +421,54 @@ export class FlightSearchService {
           score: 100,
         });
       });
+    }
+
+    // 4. Enrich offers with OAG Aviation Intelligence (Terminals, Equipment, Distance, Codeshares)
+    if (OAGAdapter.isFlightInfoConfigured()) {
+      try {
+        const oagInstances = await OAGAdapter.lookupRouteInstances({
+          origin: query.origin,
+          destination: query.destination,
+          departureDate: query.departureDate,
+        });
+
+        if (oagInstances.length > 0) {
+          const oagMap = new Map<string, (typeof oagInstances)[0]>();
+          for (const inst of oagInstances) {
+            const cleanNum = inst.flightNumber.replace(/\D/g, "");
+            oagMap.set(`${inst.carrierIata}_${cleanNum}`, inst);
+            if (!oagMap.has(cleanNum)) {
+              oagMap.set(cleanNum, inst);
+            }
+          }
+
+          for (const offer of offers) {
+            const cleanNum = offer.flightNumber.replace(/\D/g, "");
+            const match =
+              oagMap.get(`${offer.airlineCode}_${cleanNum}`) ||
+              oagMap.get(cleanNum);
+
+            if (match) {
+              if (match.departureTerminal) offer.terminal = match.departureTerminal;
+              if (match.arrivalTerminal) offer.arrivalTerminal = match.arrivalTerminal;
+              if (match.aircraftName) offer.aircraft = match.aircraftName;
+              if (match.distanceKm) offer.distanceKm = match.distanceKm;
+              if (match.codeshares && match.codeshares.length > 0) offer.codeshares = match.codeshares;
+
+              if (offer.segments && offer.segments[0]) {
+                const seg = offer.segments[0];
+                if (match.departureTerminal) seg.terminal = match.departureTerminal;
+                if (match.arrivalTerminal) seg.arrivalTerminal = match.arrivalTerminal;
+                if (match.aircraftName) seg.aircraft = match.aircraftName;
+                if (match.distanceKm) seg.distanceKm = match.distanceKm;
+                if (match.codeshares && match.codeshares.length > 0) seg.codeshares = match.codeshares;
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error("OAG route instance enrichment error:", err);
+      }
     }
 
     return offers;

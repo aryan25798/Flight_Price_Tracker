@@ -262,6 +262,16 @@ export function TrackersTable({
                             <span>{t.airline_name ? `${t.airline_name} ` : ""}{t.flight_number}</span>
                           </span>
                         )}
+                        {Boolean((t.flight_details as Record<string, unknown> | null)?.terminal) && (
+                          <span className="text-[10px] font-extrabold bg-slate-800 text-sky-300 border border-sky-400/30 px-1.5 py-0.5 rounded">
+                            {String((t.flight_details as Record<string, unknown>).terminal).replace(/terminal\s*/i, "T")}
+                          </span>
+                        )}
+                        {Boolean((t.flight_details as Record<string, unknown> | null)?.aircraft) && (
+                          <span className="text-[10px] text-slate-300 bg-white/5 border border-white/10 px-1.5 py-0.5 rounded">
+                            ✈ {String((t.flight_details as Record<string, unknown>).aircraft)}
+                          </span>
+                        )}
                         <span className="inline-flex items-center gap-1 font-semibold text-[var(--foreground)]">
                           <Calendar className="h-3 w-3 text-sky-400" />
                           {formatDateShort(t.departure_date)}
@@ -408,6 +418,16 @@ export function TrackersTable({
                                 <span className="text-[10px] font-mono font-bold text-sky-400 bg-sky-950/60 px-1.5 py-0.5 rounded border border-sky-500/30 inline-flex items-center gap-1.5">
                                   <AirlineLogo code={t.airline_code || t.flight_number.slice(0, 2)} name={t.airline_name || undefined} size="xs" />
                                   <span>{t.airline_name ? `${t.airline_name} ` : ""}{t.flight_number}</span>
+                                </span>
+                              )}
+                              {Boolean((t.flight_details as Record<string, unknown> | null)?.terminal) && (
+                                <span className="text-[9px] font-extrabold bg-slate-800 text-sky-300 border border-sky-400/30 px-1.5 py-0.5 rounded">
+                                  {String((t.flight_details as Record<string, unknown>).terminal).replace(/terminal\s*/i, "T")}
+                                </span>
+                              )}
+                              {Boolean((t.flight_details as Record<string, unknown> | null)?.aircraft) && (
+                                <span className="text-[9px] text-slate-300 bg-white/5 border border-white/10 px-1.5 py-0.5 rounded">
+                                  ✈ {String((t.flight_details as Record<string, unknown>).aircraft)}
                                 </span>
                               )}
                             </div>

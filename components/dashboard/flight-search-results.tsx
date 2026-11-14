@@ -464,6 +464,25 @@ export function FlightSearchResults({
                       <Luggage className="h-3 w-3 text-slate-500" />
                       <span>{offer.baggageAllowance}</span>
                     </span>
+
+                    {offer.aircraft && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-sky-500/10 border border-sky-500/25 px-2 py-0.5 text-[10px] font-semibold text-sky-300">
+                        <Plane className="h-2.5 w-2.5 text-sky-400" />
+                        <span>{offer.aircraft}</span>
+                      </span>
+                    )}
+
+                    {offer.distanceKm && (
+                      <span className="text-[10px] text-slate-400 font-mono hidden sm:inline-block">
+                        {offer.distanceKm.toLocaleString()} km
+                      </span>
+                    )}
+
+                    {offer.codeshares && offer.codeshares.length > 0 && (
+                      <span className="text-[10px] text-purple-300/80 bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded-full hidden md:inline-block">
+                        Codeshare: {offer.codeshares.slice(0, 2).join(", ")}
+                      </span>
+                    )}
                   </div>
 
                   <span className="text-[11px] text-slate-400 font-medium">
@@ -501,7 +520,14 @@ export function FlightSearchResults({
                       <span className="text-lg sm:text-xl font-extrabold text-white tracking-tight">
                         {offer.departureTime}
                       </span>
-                      <p className="text-xs font-bold text-sky-400">{offer.originAirport}</p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-xs font-bold text-sky-400">{offer.originAirport}</p>
+                        {offer.terminal && (
+                          <span className="text-[9px] font-extrabold bg-sky-950/60 text-sky-300 border border-sky-400/30 px-1 py-0.2 rounded leading-tight shadow-xs">
+                            {offer.terminal.replace(/terminal\s*/i, "T")}
+                          </span>
+                        )}
+                      </div>
                       <p className="text-[10px] text-slate-400 truncate max-w-[80px]">
                         {offer.originCity}
                       </p>
@@ -538,7 +564,14 @@ export function FlightSearchResults({
                       <span className="text-lg sm:text-xl font-extrabold text-white tracking-tight">
                         {offer.arrivalTime}
                       </span>
-                      <p className="text-xs font-bold text-sky-400">{offer.destinationAirport}</p>
+                      <div className="flex items-center justify-end gap-1.5">
+                        {offer.arrivalTerminal && (
+                          <span className="text-[9px] font-extrabold bg-sky-950/60 text-sky-300 border border-sky-400/30 px-1 py-0.2 rounded leading-tight shadow-xs">
+                            {offer.arrivalTerminal.replace(/terminal\s*/i, "T")}
+                          </span>
+                        )}
+                        <p className="text-xs font-bold text-sky-400">{offer.destinationAirport}</p>
+                      </div>
                       <p className="text-[10px] text-slate-400 truncate max-w-[80px]">
                         {offer.destinationCity}
                       </p>
@@ -624,7 +657,11 @@ export function FlightSearchResults({
                                   {seg.airline} · {seg.flightNumber}
                                 </p>
                                 <p className="text-[10px] text-slate-400">
-                                  {seg.origin} ({seg.departureTime}) → {seg.destination} ({seg.arrivalTime})
+                                  {seg.origin} ({seg.departureTime})
+                                  {seg.terminal ? ` [${seg.terminal}]` : ""} →{" "}
+                                  {seg.destination} ({seg.arrivalTime})
+                                  {seg.arrivalTerminal ? ` [${seg.arrivalTerminal}]` : ""}
+                                  {seg.aircraft ? ` · ${seg.aircraft}` : ""}
                                 </p>
                               </div>
                             </div>

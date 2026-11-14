@@ -47,7 +47,7 @@ export function formatRelativeTime(isoTimestamp: string | null | undefined): str
 
 /**
  * Returns the canonical base URL of the running application.
- * Automatically adapts across Vercel production/preview deployments, custom domains, and local dev.
+ * Prioritizes custom/canonical production domains to avoid Vercel deployment preview / SSO walls.
  */
 export function getAppUrl(): string {
   if (process.env.NEXT_PUBLIC_APP_URL) {
@@ -56,11 +56,16 @@ export function getAppUrl(): string {
   if (process.env.NEXT_PUBLIC_SITE_URL) {
     return process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "");
   }
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
+  // When running on Vercel or in production, always use the canonical live domain
+  // to avoid Vercel preview authentication/SSO redirects when clicking email links
+  if (process.env.VERCEL || process.env.NODE_ENV === "production") {
+    return "https://flight-price-tracker-nu.vercel.app";
   }
   if (typeof window !== "undefined" && window.location.origin) {
     return window.location.origin;
+  }
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
   }
   return "http://localhost:3000";
 }
