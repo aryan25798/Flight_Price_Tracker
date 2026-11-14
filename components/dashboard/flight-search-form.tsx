@@ -30,6 +30,13 @@ import { Input } from "@/components/ui/input";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { formatCurrency, formatDateShort } from "@/lib/utils";
 import {
+  getTodayDateString,
+  getTomorrowDateString,
+  addDaysToDateOnly,
+  formatCalendarDate,
+  calculateFlightTimeline,
+} from "@/lib/dates/flight-datetime";
+import {
   CABIN_CLASSES,
   CreateTrackerSchema,
   SUPPORTED_CURRENCIES,
@@ -79,7 +86,7 @@ export function FlightSearchForm({
     return sortedOptions.slice(start, start + OPTIONS_PAGE_SIZE);
   }, [sortedOptions, optionsPage]);
 
-  const today = React.useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const today = React.useMemo(() => getTodayDateString(), []);
 
   const {
     register,
@@ -586,38 +593,77 @@ export function FlightSearchForm({
                   <div className="grid gap-2.5">
                     {pagedOptions.map((opt, idx) => (
                       <div
-                        key={idx}
+                        key={opt.id || idx}
                         className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-[var(--border)] glass-surface-3 p-3.5 hover:border-sky-500/40 hover:shadow-xs transition-all"
                       >
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
+                        <div className="space-y-1.5 flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
                             <span className="font-bold text-sm text-[var(--foreground)]">{opt.airline}</span>
                             {opt.flightNumber && (
-                              <span className="font-mono text-xs text-[var(--muted-foreground)]">
-                                #{opt.flightNumber}
+                              <span className="font-mono text-xs text-sky-400 bg-sky-950/60 px-1.5 py-0.5 rounded border border-sky-500/20">
+                                {opt.airlineCode ? `${opt.airlineCode} ${opt.flightNumber}` : `#${opt.flightNumber}`}
                               </span>
                             )}
                             <Badge variant={opt.isDirect ? "success" : "secondary"}>
                               {opt.isDirect ? "Non-Stop" : `${opt.transfers} stop(s)`}
                             </Badge>
+                            {opt.isOvernight && (
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                                +{opt.dayDifference} Day (Overnight)
+                              </span>
+                            )}
+                            <span className="text-[9px] font-mono text-slate-400 bg-white/5 px-1.5 py-0.5 rounded border border-white/10">
+                              {opt.priceStatus === "CACHED_PRICE" ? "48h Cache" : "Live Price"}
+                            </span>
                           </div>
+
+                          {/* Flight Timeline Schedule */}
+                          <div className="flex items-center gap-2 text-xs">
+                            <span className="font-bold text-[var(--foreground)] text-sm">
+                              {opt.departureTimeLocal || "—"}
+                            </span>
+                            <span className="text-[var(--muted-foreground)] text-[11px] font-mono">({origin})</span>
+                            <span className="text-[var(--muted-foreground)]">→</span>
+                            <span className="font-bold text-[var(--foreground)] text-sm">
+                              {opt.arrivalTimeLocal || "—"}
+                            </span>
+                            <span className="text-[var(--muted-foreground)] text-[11px] font-mono">({destination})</span>
+                            {opt.durationFormatted && (
+                              <span className="text-[11px] text-slate-400 ml-1">
+                                • {opt.durationFormatted}
+                              </span>
+                            )}
+                          </div>
+
                           <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--muted-foreground)]">
                             <span>
-                              Departs: <strong className="text-[var(--foreground)]">{formatDateShort(opt.departureAt)}</strong>
+                              Departure: <strong className="text-[var(--foreground)]">{formatCalendarDate(opt.departureDateOnly || departureDate)}</strong>
                             </span>
                             <span className="flex items-center gap-1">
                               <Store className="h-3 w-3" />
-                              Provider: <strong className="text-[var(--foreground)]">{opt.seller}</strong>
+                              Seller: <strong className="text-[var(--foreground)]">{opt.seller}</strong>
                             </span>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-3 self-end sm:self-center">
+                        <div className="flex items-center gap-2.5 self-end sm:self-center shrink-0">
                           <div className="text-right">
                             <span className="text-base sm:text-lg font-bold tabular-nums text-sky-400">
                               {formatCurrency(opt.price, opt.currency)}
                             </span>
                           </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setValue("targetPrice", Math.round(opt.price * 0.95), { shouldValidate: true });
+                              toast.success(`Target set to ${formatCurrency(Math.round(opt.price * 0.95), currency)} for ${opt.airline}! Click "Activate Radar Tracker" to save.`);
+                            }}
+                            className="inline-flex items-center gap-1 rounded-xl border border-sky-400/30 bg-sky-500/15 hover:bg-sky-500/25 px-3 py-1.5 text-xs font-bold text-sky-300 transition-all cursor-pointer shadow-2xs"
+                            title="Set price tracker for this specific flight"
+                          >
+                            <Plane className="h-3 w-3" />
+                            <span>Track</span>
+                          </button>
                           <a
                             href={opt.bookingUrl}
                             target="_blank"

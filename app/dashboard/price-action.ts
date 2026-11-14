@@ -1,27 +1,10 @@
-import { type MultiSiteDealLink } from "@/lib/flight-urls";
+import {
+  type FlightOption,
+  type FlightPriceQuote,
+  type PriceReliabilityStatus,
+} from "@/lib/flights/pricing-service";
 
-export interface FlightOption {
-  price: number;
-  currency: string;
-  airline: string;
-  seller: string;
-  departureAt: string;
-  transfers: number;
-  durationMinutes: number;
-  flightNumber: string;
-  bookingUrl: string;
-  isDirect: boolean;
-}
-
-export interface FlightPriceQuote {
-  found: boolean;
-  isFallback?: boolean;
-  bestPrice?: number;
-  currency?: string;
-  options?: FlightOption[];
-  comparisonSites?: MultiSiteDealLink[];
-  message?: string;
-}
+export type { FlightOption, FlightPriceQuote, PriceReliabilityStatus };
 
 export async function checkCurrentPriceAction(params: {
   origin: string;

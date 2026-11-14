@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { compareDateOnly, isDateInPast } from "@/lib/dates/flight-datetime";
 
 export const SUPPORTED_CURRENCIES = ["INR", "USD", "EUR", "GBP", "AED", "SGD"] as const;
 export const CABIN_CLASSES = ["economy", "premium_economy", "business", "first"] as const;
@@ -48,10 +49,7 @@ export const CreateTrackerSchema = z
     path: ["infants"],
   })
   .refine(
-    (data) => {
-      const today = new Date().toISOString().slice(0, 10);
-      return data.departureDate >= today;
-    },
+    (data) => !isDateInPast(data.departureDate),
     {
       message: "Departure date cannot be in the past",
       path: ["departureDate"],
@@ -60,7 +58,7 @@ export const CreateTrackerSchema = z
   .refine(
     (data) => {
       if (data.tripType === "round_trip") {
-        return Boolean(data.returnDate) && (data.returnDate ?? "") >= data.departureDate;
+        return Boolean(data.returnDate) && compareDateOnly(data.returnDate ?? "", data.departureDate) >= 0;
       }
       return true;
     },
