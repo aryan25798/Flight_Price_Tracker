@@ -30,6 +30,7 @@ import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AIActionCard, type ActionProposal } from "./ai-action-card";
+import { CopilotAvatar } from "./copilot-avatar";
 import { cn } from "@/lib/utils";
 import type { Profile, AIScope } from "@/types/database";
 
@@ -441,13 +442,7 @@ export function AICopilotDrawer({
         {/* Drawer Header */}
         <div className="shrink-0 flex items-center justify-between border-b border-white/10 px-4 py-3.5 bg-slate-950/80 backdrop-blur-xl">
           <div className="flex items-center gap-3">
-            <div className="relative flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-tr from-sky-500/20 to-blue-600/30 border border-sky-400/40 text-sky-400 shadow-[0_0_15px_rgba(56,189,248,0.25)]">
-              <Sparkles className="h-4 w-4" />
-              <span className="absolute -bottom-0.5 -right-0.5 flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
-              </span>
-            </div>
+            <CopilotAvatar size="md" waving={true} floating={false} showStatusDot={true} isOnline={true} />
             <div>
               <div className="flex items-center gap-1.5">
                 <h3 className="font-extrabold text-sm text-white tracking-tight">
@@ -518,9 +513,7 @@ export function AICopilotDrawer({
               </div>
             ) : (
               <div key={m.id} className="flex gap-2.5 items-start mr-auto max-w-[94%]">
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500/20 to-blue-600/10 border border-sky-400/30 text-sky-400 shadow-[0_0_12px_rgba(56,189,248,0.15)] mt-0.5">
-                  <Sparkles className="h-3.5 w-3.5" />
-                </div>
+                <CopilotAvatar size="sm" waving={false} floating={false} className="mt-0.5" />
                 <div className="flex flex-col gap-1 flex-1 min-w-0">
                   <div className="flex items-center gap-2 px-1">
                     <span className="text-[11px] font-bold text-slate-300">AeroDrop Copilot</span>

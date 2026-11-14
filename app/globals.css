@@ -265,6 +265,64 @@
   background: rgba(255, 255, 255, 0.22);
 }
 
+/* =========================================================================
+   AERODROP COPILOT AVATAR ANIMATIONS (WAVING HAND & FLOATING BOT)
+   ========================================================================= */
+@keyframes copilot-wave {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  15% {
+    transform: rotate(18deg);
+  }
+  30% {
+    transform: rotate(-10deg);
+  }
+  45% {
+    transform: rotate(16deg);
+  }
+  60% {
+    transform: rotate(-6deg);
+  }
+  75% {
+    transform: rotate(12deg);
+  }
+}
+
+@keyframes copilot-float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-3.5px);
+  }
+}
+
+@keyframes copilot-blink {
+  0%, 88%, 100% {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+  94% {
+    opacity: 0.15;
+    transform: scaleY(0.1);
+  }
+}
+
+.animate-copilot-wave {
+  animation: copilot-wave 2.8s ease-in-out infinite;
+  transform-origin: 47px 42px;
+}
+
+.animate-copilot-float {
+  animation: copilot-float 3.5s ease-in-out infinite;
+}
+
+.animate-copilot-eyes {
+  animation: copilot-blink 4s ease-in-out infinite;
+  transform-origin: 32px 26px;
+}
+
 /* Respect Accessibility & Reduced Motion */
 @media (prefers-reduced-motion: reduce) {
   *, ::before, ::after {
