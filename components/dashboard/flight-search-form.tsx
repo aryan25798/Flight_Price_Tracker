@@ -221,7 +221,17 @@ export function FlightSearchForm({
   async function onSubmit(values: CreateTrackerInput) {
     setSubmitting(true);
     try {
-      const result = await createTrackerAction(values);
+      const resolvedInitialPrice =
+        selectedOffer?.price ||
+        (searchResults?.minPrice && searchResults.minPrice > 0 ? searchResults.minPrice : undefined) ||
+        (quote?.bestPrice && quote.bestPrice > 0 ? quote.bestPrice : undefined);
+
+      const payload = {
+        ...values,
+        ...(resolvedInitialPrice ? { initialPrice: resolvedInitialPrice } : {}),
+      };
+
+      const result = await createTrackerAction(payload);
       if (!result.ok) {
         toast.error(result.message);
         return;

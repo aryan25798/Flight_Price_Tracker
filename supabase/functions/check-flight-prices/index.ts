@@ -17,6 +17,8 @@ interface SystemConfig {
   priceDropThresholdPercent: number;
   maintenanceMode: boolean;
   maxRouteRetries: number;
+  serpApiKey?: string;
+  appUrl?: string;
 }
 
 interface MonitoredRouteRow {
@@ -85,6 +87,8 @@ async function loadSystemConfig(
     priceDropThresholdPercent: parseNumberSetting(map.get("price_drop_threshold_percent"), 5),
     maintenanceMode: map.get("maintenance_mode") === true,
     maxRouteRetries: parseNumberSetting(map.get("max_route_retries"), 5),
+    serpApiKey: (map.get("serpapi_api_key") as string) || undefined,
+    appUrl: (map.get("app_url") as string) || undefined,
   };
 }
 
@@ -264,7 +268,50 @@ Deno.serve(async (req: Request) => {
               currency: sp?.currency ?? "INR",
             };
 
-            const offer = await provider.searchFlights(query);
+            let offer = await provider.searchFlights(query);
+
+            // Multi-provider fallback: Query SerpApi Google Flights if primary provider has no fares
+            if (!offer) {
+              const serpApiKey = Deno.env.get("SERPAPI_API_KEY") || config.serpApiKey;
+              if (serpApiKey) {
+                try {
+                  const serpUrl = new URL("https://serpapi.com/search");
+                  serpUrl.searchParams.set("engine", "google_flights");
+                  serpUrl.searchParams.set("departure_id", query.origin.toUpperCase());
+                  serpUrl.searchParams.set("arrival_id", query.destination.toUpperCase());
+                  serpUrl.searchParams.set("outbound_date", query.departureDate);
+                  if (query.tripType === "round_trip" && query.returnDate) {
+                    serpUrl.searchParams.set("return_date", query.returnDate);
+                    serpUrl.searchParams.set("type", "1");
+                  } else {
+                    serpUrl.searchParams.set("type", "2");
+                  }
+                  serpUrl.searchParams.set("currency", query.currency.toUpperCase());
+                  serpUrl.searchParams.set("api_key", serpApiKey);
+
+                  const serpRes = await fetch(serpUrl.toString());
+                  const serpData = await serpRes.json();
+                  const flights = [...(serpData.best_flights || []), ...(serpData.other_flights || [])];
+                  if (flights.length > 0 && typeof flights[0].price === "number") {
+                    const top = flights[0];
+                    const firstLeg = top.flights?.[0];
+                    offer = {
+                      price: top.price,
+                      currency: query.currency.toUpperCase(),
+                      airline: firstLeg?.airline || "Available Airline",
+                      flightNumber: firstLeg?.flight_number || null,
+                      departureAt: `${query.departureDate}T${firstLeg?.departure_airport?.time || "00:00"}:00`,
+                      returnAt: null,
+                      transfers: Math.max(0, (top.flights?.length || 1) - 1),
+                      bookingUrl: `https://www.google.com/travel/flights?q=Flights%20to%20${query.destination}%20from%20${query.origin}%20on%20${query.departureDate}`,
+                      provider: "google_flights",
+                    };
+                  }
+                } catch (serpErr) {
+                  console.error("SerpApi fallback error in edge function:", serpErr);
+                }
+              }
+            }
 
             if (!offer) {
               await supabaseAdmin

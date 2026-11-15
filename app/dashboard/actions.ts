@@ -7,6 +7,7 @@ import { CreateTrackerSchema } from "@/lib/validations/tracker";
 import { buildTrackerCreatedEmail, sendEmail } from "@/lib/email/smtp";
 import { sendTelegramAlert } from "@/lib/telegram/server";
 import { sendPushToUser } from "@/lib/push/server";
+import { pollSingleRoute } from "@/lib/flights/poller";
 
 export interface ActionResult {
   ok: boolean;
@@ -76,6 +77,55 @@ export async function createTrackerAction(rawInput: unknown): Promise<ActionResu
     };
   }
 
+  // Extract created tracker ID and route ID
+  const trackerRecord = (typeof createdTrackerId === "object" && createdTrackerId !== null
+    ? (createdTrackerId as Record<string, unknown>)
+    : null);
+  const trackerId = trackerRecord?.id ? String(trackerRecord.id) : (typeof createdTrackerId === "string" ? createdTrackerId : null);
+  const routeId = trackerRecord?.route_id ? String(trackerRecord.route_id) : null;
+
+  // Immediately initialize last_seen_price if initialPrice was provided from search
+  if (trackerId && v.initialPrice) {
+    const nowIso = new Date().toISOString();
+    await supabase
+      .from("tracked_flights")
+      .update({
+        last_seen_price: v.initialPrice,
+        initial_price: v.initialPrice,
+        updated_at: nowIso,
+      })
+      .eq("id", trackerId);
+
+    if (routeId) {
+      await supabase
+        .from("monitored_routes")
+        .update({
+          last_price: v.initialPrice,
+          last_airline: v.airlineCode || v.airlineName || null,
+          last_booking_url: v.bookingUrl || null,
+          last_checked_at: nowIso,
+          updated_at: nowIso,
+        })
+        .eq("id", routeId);
+
+      await supabase.from("price_history").insert({
+        route_id: routeId,
+        route_key: `${v.origin}_${v.destination}_${v.departureDate}`,
+        price: v.initialPrice,
+        currency: v.currency,
+        airline: v.airlineCode || v.airlineName || null,
+        booking_url: v.bookingUrl || null,
+        provider: "google_flights",
+        checked_at: nowIso,
+      });
+    }
+  } else if (routeId) {
+    // If no initial price was captured, poll route in background immediately
+    pollSingleRoute(routeId).catch((pollErr) =>
+      console.warn("Immediate background poll failed for new tracker:", pollErr)
+    );
+  }
+
   // Dispatch email notification to user via SMTP if configured
   const { user, profile } = await getAuthenticatedProfile();
   
@@ -84,7 +134,7 @@ export async function createTrackerAction(rawInput: unknown): Promise<ActionResu
     .from("notification_logs")
     .insert({
       user_id: user.id,
-      tracker_id: typeof createdTrackerId === "string" ? createdTrackerId : null,
+      tracker_id: trackerId,
       notification_type: "system",
       current_price: v.targetPrice,
       currency: v.currency,

@@ -34,19 +34,25 @@ export async function sendTelegramAlert({
 
   // 2. Fallback to Supabase telegram-link edge function (which has TELEGRAM_BOT_TOKEN secret)
   try {
-    const supabase = await createClient();
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
+    let accessToken: string | null = null;
+    try {
+      const supabase = await createClient();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      accessToken = session?.access_token || null;
+    } catch {
+      // Outside request context (e.g. background poller or cron worker)
+    }
 
     const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    if (!baseUrl || !session?.access_token) return false;
+    if (!baseUrl || !accessToken) return false;
 
     const res = await fetch(`${baseUrl}/functions/v1/telegram-link`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${session.access_token}`,
+        Authorization: `Bearer ${accessToken}`,
       },
       body: JSON.stringify({
         action: "send_message",

@@ -22,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
+import { pollSingleRoute } from "@/lib/flights/poller";
 import type { TrackedFlight } from "@/types/database";
 
 const DEFAULT_PAGE_SIZE = 10;
@@ -96,6 +97,14 @@ export default async function DashboardPage({
   const pausedCount = Math.max(0, (totalCount ?? 0) - (activeCount ?? 0));
 
   const trackers = (trackersData ?? []) as unknown as TrackedFlight[];
+
+  // Self-Healing: if any active tracker is missing price or has not been inspected, poll in background
+  for (const t of trackers) {
+    if (t.is_active && t.route_id && (t.last_seen_price === null || !t.monitored_routes?.last_checked_at)) {
+      pollSingleRoute(t.route_id).catch(() => {});
+    }
+  }
+
   const telegramLinked = Boolean(profile.telegram_chat_id);
   const displayName = profile.email?.split("@")[0] || "Traveler";
 

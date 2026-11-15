@@ -4,6 +4,7 @@ import { createClient, getAuthenticatedProfile } from "@/lib/supabase/server";
 import { TrackersTable } from "@/components/dashboard/trackers-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { pollSingleRoute } from "@/lib/flights/poller";
 import type { TrackedFlight } from "@/types/database";
 
 const DEFAULT_PAGE_SIZE = 15;
@@ -66,6 +67,13 @@ export default async function TrackersPage({
       .eq("user_id", user.id)
       .eq("is_active", true),
   ]);
+
+  const trackersList = (data ?? []) as unknown as TrackedFlight[];
+  for (const t of trackersList) {
+    if (t.is_active && t.route_id && (t.last_seen_price === null || !t.monitored_routes?.last_checked_at)) {
+      pollSingleRoute(t.route_id).catch(() => {});
+    }
+  }
 
   const isSuperAdmin = profile.role === "super_admin";
   const userTier = profile.tier || "free";
