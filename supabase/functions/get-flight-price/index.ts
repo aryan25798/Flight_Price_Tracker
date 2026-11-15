@@ -69,8 +69,13 @@ Deno.serve(async (req: Request) => {
       currency: q.currency,
     };
 
-    const provider = getFlightProvider("travelpayouts");
-    const offer = await provider.searchFlights(searchQuery);
+    let provider = getFlightProvider("google_flights");
+    let offer = await provider.searchFlights(searchQuery);
+
+    if (!offer) {
+      provider = getFlightProvider("travelpayouts");
+      offer = await provider.searchFlights(searchQuery);
+    }
 
     if (!offer) {
       return jsonResponse({
