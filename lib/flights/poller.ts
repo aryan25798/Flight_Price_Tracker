@@ -60,7 +60,8 @@ export async function pollSingleRoute(
 
   const now = new Date();
   const nowIso = now.toISOString();
-  const nextCheckIso = new Date(now.getTime() + 4 * 60 * 60 * 1000).toISOString();
+  // Schedule next check for 3h 50m to guarantee alignment with 4-hour cron cycles
+  const nextCheckIso = new Date(now.getTime() + (3 * 60 + 50) * 60 * 1000).toISOString();
 
   const sp = (route.search_parameters as Record<string, unknown> | null) || {};
   const origin = (sp.origin as string) || route.origin;
@@ -126,6 +127,7 @@ export async function pollSingleRoute(
         last_airline: airline,
         last_booking_url: bookingUrl,
         provider,
+        status: "active",
         last_checked_at: nowIso,
         next_check_at: nextCheckIso,
         failure_count: 0,
@@ -441,6 +443,24 @@ export async function pollAllDueRoutes(options?: {
   const runId = runRow?.id;
 
   try {
+    // 1. Auto-heal any routes that active users are monitoring
+    const { data: activeTrackers } = await supabase
+      .from("tracked_flights")
+      .select("route_id")
+      .eq("is_active", true);
+
+    const activeRouteIds = Array.from(
+      new Set((activeTrackers || []).map((t) => t.route_id).filter(Boolean))
+    );
+
+    if (activeRouteIds.length > 0) {
+      await supabase
+        .from("monitored_routes")
+        .update({ status: "active", failure_count: 0 })
+        .in("id", activeRouteIds)
+        .neq("status", "active");
+    }
+
     let query = supabase
       .from("monitored_routes")
       .select("id, origin, destination, departure_date, last_price, next_check_at, status")
@@ -449,8 +469,10 @@ export async function pollAllDueRoutes(options?: {
       .limit(limit);
 
     if (!options?.forceAll) {
-      // Due if next_check_at <= NOW() OR last_price IS NULL
-      query = query.or(`next_check_at.lte.${nowIso},last_price.is.null`);
+      // Due if next_check_at <= NOW() + 25m jitter buffer, or last_checked_at is older than 3.5h, or last_price is NULL
+      const dueBuffer = new Date(now.getTime() + 25 * 60 * 1000).toISOString();
+      const staleBuffer = new Date(now.getTime() - 3.5 * 60 * 60 * 1000).toISOString();
+      query = query.or(`next_check_at.lte.${dueBuffer},last_checked_at.lte.${staleBuffer},last_price.is.null`);
     }
 
     const { data: dueRoutes, error: queryErr } = await query;

@@ -197,6 +197,36 @@ Deno.serve(async (req: Request) => {
   try {
     const config = await loadSystemConfig(supabaseAdmin);
 
+    // Option 1: Delegate to Next.js unified multi-provider poller if available
+    const appUrl = config.appUrl || Deno.env.get("APP_URL") || Deno.env.get("NEXT_PUBLIC_APP_URL");
+    if (appUrl) {
+      try {
+        const nextPollerUrl = `${appUrl.replace(/\/+$/, "")}/api/cron/check-prices?token=${cronSecret || ""}&force_alerts=true`;
+        console.log(`Delegating 4-hour cycle to Next.js poller: ${nextPollerUrl}`);
+        const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+        const res = await fetch(nextPollerUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-cron-secret": cronSecret || "",
+            "authorization": `Bearer ${serviceKey}`,
+          },
+        });
+        if (res.ok) {
+          const json = await res.json();
+          console.log("Next.js poller execution completed:", json);
+          return jsonResponse({
+            status: "completed_via_nextjs",
+            ...json,
+          });
+        } else {
+          console.warn(`Next.js poller returned HTTP ${res.status}:`, await res.text());
+        }
+      } catch (err) {
+        console.warn("Error calling Next.js poller, proceeding with edge poller:", err);
+      }
+    }
+
     if (config.maintenanceMode) {
       await supabaseAdmin.from("polling_runs").insert({
         status: "skipped_maintenance",
@@ -586,8 +616,19 @@ Deno.serve(async (req: Request) => {
             const nextFailures = route.failure_count + 1;
             const retryable =
               routeErr instanceof FlightProviderError ? routeErr.retryable : true;
+
+            // Check if active user trackers still exist for this route
+            const { data: activeSubs } = await supabaseAdmin
+              .from("tracked_flights")
+              .select("id")
+              .eq("route_id", route.id)
+              .eq("is_active", true)
+              .limit(1);
+
+            const hasActiveTrackers = (activeSubs?.length ?? 0) > 0;
+            // Never permanently fail a route that has active subscribers
             const shouldFailRoute =
-              !retryable || nextFailures >= config.maxRouteRetries;
+              !hasActiveTrackers && (!retryable || nextFailures >= config.maxRouteRetries);
 
             const backoffMinutes = Math.min(
               1440,

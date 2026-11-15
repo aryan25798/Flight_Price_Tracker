@@ -98,10 +98,18 @@ export default async function DashboardPage({
 
   const trackers = (trackersData ?? []) as unknown as TrackedFlight[];
 
-  // Self-Healing: if any active tracker is missing price or has not been inspected, poll in background
+  // Comprehensive Self-Healing: if any active tracker is missing price, route status is failed, or hasn't been checked in > 4 hours
   for (const t of trackers) {
-    if (t.is_active && t.route_id && (t.last_seen_price === null || !t.monitored_routes?.last_checked_at)) {
-      pollSingleRoute(t.route_id).catch(() => {});
+    if (t.is_active && t.route_id) {
+      const lastCheckedMs = t.monitored_routes?.last_checked_at
+        ? new Date(t.monitored_routes.last_checked_at).getTime()
+        : 0;
+      const hoursSinceCheck = lastCheckedMs ? (Date.now() - lastCheckedMs) / (1000 * 60 * 60) : 999;
+      const isFailedRoute = t.monitored_routes?.status === "failed";
+
+      if (t.last_seen_price === null || hoursSinceCheck >= 4 || isFailedRoute) {
+        pollSingleRoute(t.route_id).catch(() => {});
+      }
     }
   }
 

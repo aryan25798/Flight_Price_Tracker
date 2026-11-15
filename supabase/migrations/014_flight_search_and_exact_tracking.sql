@@ -88,18 +88,21 @@ CREATE INDEX IF NOT EXISTS idx_search_sessions_expires_at
 -- RLS for flight_search_sessions
 ALTER TABLE public.flight_search_sessions ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can access their own search sessions or public sessions" ON public.flight_search_sessions;
 CREATE POLICY "Users can access their own search sessions or public sessions"
     ON public.flight_search_sessions
     FOR SELECT
     TO authenticated, anon
     USING (user_id IS NULL OR user_id = auth.uid());
 
+DROP POLICY IF EXISTS "Users can create search sessions" ON public.flight_search_sessions;
 CREATE POLICY "Users can create search sessions"
     ON public.flight_search_sessions
     FOR INSERT
     TO authenticated, anon
     WITH CHECK (user_id IS NULL OR user_id = auth.uid());
 
+DROP POLICY IF EXISTS "Service role full access on flight_search_sessions" ON public.flight_search_sessions;
 CREATE POLICY "Service role full access on flight_search_sessions"
     ON public.flight_search_sessions
     FOR ALL

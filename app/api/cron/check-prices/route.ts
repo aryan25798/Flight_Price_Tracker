@@ -13,17 +13,24 @@ function isAuthorized(req: NextRequest): boolean {
 
   // 2. Secret-based authorization via x-cron-secret or Authorization header
   const cronSecret = process.env.CRON_SECRET;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const headerSecret =
     req.headers.get("x-cron-secret") ||
     req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
 
-  if (cronSecret && headerSecret && headerSecret === cronSecret) {
+  if (
+    (cronSecret && headerSecret && headerSecret === cronSecret) ||
+    (serviceKey && headerSecret && headerSecret === serviceKey)
+  ) {
     return true;
   }
 
-  // 3. Query parameter secret fallback (?token=...)
+  // 3. Query parameter secret fallback (?token=... or ?key=...)
   const tokenParam = req.nextUrl.searchParams.get("token") || req.nextUrl.searchParams.get("key");
-  if (cronSecret && tokenParam && tokenParam === cronSecret) {
+  if (
+    (cronSecret && tokenParam && tokenParam === cronSecret) ||
+    (serviceKey && tokenParam && tokenParam === serviceKey)
+  ) {
     return true;
   }
 
