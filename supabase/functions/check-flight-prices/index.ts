@@ -172,12 +172,16 @@ Deno.serve(async (req: Request) => {
     return errorResponse("Method not allowed", 405);
   }
 
-  // Authenticate either via CRON_SECRET header or verified super_admin JWT
+  // Authenticate via CRON_SECRET header, SUPABASE_SERVICE_ROLE_KEY, or verified super_admin JWT
   const cronSecret = Deno.env.get("CRON_SECRET");
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   const incomingSecret = req.headers.get("x-cron-secret");
+  const incomingAuth = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
   let authorized = false;
 
   if (cronSecret && incomingSecret && constantTimeEqual(incomingSecret, cronSecret)) {
+    authorized = true;
+  } else if (serviceKey && incomingAuth && constantTimeEqual(incomingAuth, serviceKey)) {
     authorized = true;
   } else {
     const adminCheck = await requireSuperAdmin(req);
