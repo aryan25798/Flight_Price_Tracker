@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient, requireSuperAdminProfile } from "@/lib/supabase/server";
 import { callAdminEdgeFunction } from "@/services/admin/admin-api";
 import { sendEmail } from "@/lib/email/smtp";
+import { pollAllDueRoutes } from "@/lib/flights/poller";
 
 export interface AdminStats {
   total_users: number;
@@ -31,8 +32,40 @@ export interface PollingRunRow {
 export async function adminActionDispatch(
   payload: Record<string, unknown>,
   pathsToRevalidate: string[] = ["/admin"],
-) {
+): Promise<{ ok: boolean; data?: unknown; error?: string }> {
   await requireSuperAdminProfile();
+
+  if (payload.action === "trigger_poll") {
+    // 1. Run full multi-provider polling cycle across all active routes (SerpApi + OAG + Travelpayouts)
+    const pollResult = await pollAllDueRoutes({ forceAll: true, limit: 50 });
+
+    // 2. Dual-dispatch to edge function for audit logging and Supabase sync
+    callAdminEdgeFunction(payload).catch((err) =>
+      console.warn("Edge function manual poll dispatch note:", err)
+    );
+
+    // 3. Revalidate admin and dashboard routes
+    for (const p of pathsToRevalidate) {
+      revalidatePath(p);
+    }
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/trackers");
+
+    if (!pollResult.ok) {
+      return { ok: false, error: pollResult.error || "Manual polling failed" };
+    }
+
+    return {
+      ok: true,
+      data: {
+        claimed: pollResult.claimed,
+        succeeded: pollResult.succeeded,
+        failed: pollResult.failed,
+        notificationsSent: pollResult.notificationsSent,
+      },
+    };
+  }
+
   const res = await callAdminEdgeFunction(payload);
   if (res.ok) {
     for (const p of pathsToRevalidate) {

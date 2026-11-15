@@ -16,10 +16,15 @@ export function TriggerPollButton() {
     try {
       const res = await adminActionDispatch({ action: "trigger_poll" }, ["/admin"]);
       if (!res.ok) {
-        toast.error(res.error);
+        toast.error(res.error || "Manual polling failed");
         return;
       }
-      toast.success("Manual polling cycle completed");
+      const data = res.data as { claimed?: number; succeeded?: number; notificationsSent?: number } | undefined;
+      if (data && typeof data.succeeded === "number") {
+        toast.success(`Polled ${data.succeeded} routes. Sent ${data.notificationsSent || 0} alert(s)!`);
+      } else {
+        toast.success("Manual polling cycle completed successfully");
+      }
       router.refresh();
     } finally {
       setLoading(false);
