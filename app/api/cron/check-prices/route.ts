@@ -73,11 +73,14 @@ async function handlePoll(req: NextRequest) {
   const { searchParams } = req.nextUrl;
   const routeId = searchParams.get("route_id");
   const forceAll = searchParams.get("force") === "true";
+  const forceAlerts =
+    searchParams.get("force_alerts") === "true" ||
+    searchParams.get("forceAlerts") === "true";
   const limit = Math.min(50, Math.max(1, Number(searchParams.get("limit")) || 25));
 
   try {
     if (routeId) {
-      const singleResult = await pollSingleRoute(routeId);
+      const singleResult = await pollSingleRoute(routeId, { forceAlerts });
       return NextResponse.json({
         ok: singleResult.ok,
         type: "single",
@@ -86,7 +89,7 @@ async function handlePoll(req: NextRequest) {
       });
     }
 
-    const cycleResult = await pollAllDueRoutes({ limit, forceAll });
+    const cycleResult = await pollAllDueRoutes({ limit, forceAll, forceAlerts });
     return NextResponse.json({
       ok: cycleResult.ok,
       type: "cycle",

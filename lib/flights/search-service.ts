@@ -90,6 +90,7 @@ export interface NormalizedFlightOffer {
   cabinClass: CabinClass;
   baggageAllowance: string;
   seller: string;
+  provider?: "google_flights" | "travelpayouts" | "amadeus" | "oag";
   bookingUrl: string | null;
   comparisonSites: { name: string; url: string; icon?: string }[];
   isOvernight: boolean;
@@ -294,7 +295,9 @@ export class FlightSearchService {
   }
 
   /**
-   * Queries provider adapters and aggregates results.
+   * Queries provider adapters concurrently in parallel and aggregates results.
+   * Compares prices across providers to ensure the user gets the lowest verified fare.
+   * Enriches all flight options with OAG Aviation Intelligence (Terminals, Equipment, Distance, Codeshares).
    */
   private static async queryAllProviders(query: FlightSearchQuery): Promise<NormalizedFlightOffer[]> {
     const comparisonSites = generateMultiSiteComparisonLinks({
@@ -309,175 +312,212 @@ export class FlightSearchService {
 
     const originInfo = getAirportDetails(query.origin);
     const destInfo = getAirportDetails(query.destination);
-    const offers: NormalizedFlightOffer[] = [];
-    const seenFingerprints = new Set<string>();
 
-    // 1. Query SerpApi Google Flights Live Search Engine if configured
-    if (SerpApiGoogleFlightsAdapter.isConfigured()) {
-      try {
-        const serpOffers = await SerpApiGoogleFlightsAdapter.searchFlights(query);
-        serpOffers.forEach((o) => {
-          o.comparisonSites = comparisonSites.map((s) => ({ name: s.name, url: s.url }));
-          offers.push(o);
-          seenFingerprints.add(`${o.airlineCode}_${o.flightNumber.replace(/\s+/g, "")}_${o.departureTime}`);
-        });
-      } catch (err) {
-        console.error("SerpApi Google Flights adapter error:", err);
-      }
-    }
+    // Concurrently execute all provider queries in parallel (< 2 seconds total latency)
+    const [serpSettled, amadeusSettled, travelpayoutsSettled, oagSettled] = await Promise.allSettled([
+      SerpApiGoogleFlightsAdapter.isConfigured()
+        ? SerpApiGoogleFlightsAdapter.searchFlights(query)
+        : Promise.resolve([]),
+      AmadeusAdapter.isConfigured()
+        ? AmadeusAdapter.searchFlights(query)
+        : Promise.resolve([]),
+      fetchLiveFlightPrices({
+        origin: query.origin,
+        destination: query.destination,
+        departureDate: query.departureDate,
+        returnDate: query.returnDate || undefined,
+        tripType: query.tripType || "one_way",
+        currency: query.currency || "INR",
+        directOnly: query.directOnly || false,
+      }),
+      OAGAdapter.isFlightInfoConfigured()
+        ? OAGAdapter.lookupRouteInstances({
+            origin: query.origin,
+            destination: query.destination,
+            departureDate: query.departureDate,
+          })
+        : Promise.resolve([]),
+    ]);
 
-    // 2. Query Amadeus GDS live flight offers if configured
-    if (AmadeusAdapter.isConfigured()) {
-      try {
-        const amadeusOffers = await AmadeusAdapter.searchFlights(query);
-        amadeusOffers.forEach((o) => {
-          o.comparisonSites = comparisonSites.map((s) => ({ name: s.name, url: s.url }));
-          offers.push(o);
-          seenFingerprints.add(`${o.airlineCode}_${o.flightNumber.replace(/\s+/g, "")}_${o.departureTime}`);
-        });
-      } catch (err) {
-        console.error("Amadeus search adapter error:", err);
-      }
-    }
+    const offersByKey = new Map<string, NormalizedFlightOffer>();
 
-    // 3. Query Travelpayouts / Aviasales cached fare engine
-    const rawQuote = await fetchLiveFlightPrices({
-      origin: query.origin,
-      destination: query.destination,
-      departureDate: query.departureDate,
-      returnDate: query.returnDate || undefined,
-      tripType: query.tripType || "one_way",
-      currency: query.currency || "INR",
-      directOnly: query.directOnly || false,
-    });
+    const normalizeFlightNum = (fn: string | number | undefined) => {
+      if (!fn) return "";
+      return String(fn).replace(/\s+/g, "").toUpperCase();
+    };
 
-    if (rawQuote && rawQuote.found && rawQuote.options && rawQuote.options.length > 0) {
-      rawQuote.options.forEach((opt, index) => {
-        // Enforce strict date adherence
-        if (!validateFlightMatchesRequestedDate(opt.departureDateOnly, query.departureDate)) {
-          return;
+    const addOrUpdateOffer = (candidate: NormalizedFlightOffer) => {
+      candidate.comparisonSites = comparisonSites.map((s) => ({ name: s.name, url: s.url }));
+      const cleanNum = normalizeFlightNum(candidate.flightNumber);
+      const primaryKey = `${candidate.airlineCode}_${cleanNum}_${candidate.departureTime}`;
+      const fallbackKey = `${candidate.airlineCode}_${candidate.departureTime}`;
+
+      const key = cleanNum ? primaryKey : fallbackKey;
+
+      if (!offersByKey.has(key)) {
+        offersByKey.set(key, candidate);
+      } else {
+        const existing = offersByKey.get(key)!;
+        // Keep the lower price option
+        if (candidate.price < existing.price) {
+          // Carry over any existing enriched data
+          if (!candidate.terminal && existing.terminal) candidate.terminal = existing.terminal;
+          if (!candidate.arrivalTerminal && existing.arrivalTerminal) candidate.arrivalTerminal = existing.arrivalTerminal;
+          if (!candidate.aircraft && existing.aircraft) candidate.aircraft = existing.aircraft;
+          if (!candidate.distanceKm && existing.distanceKm) candidate.distanceKm = existing.distanceKm;
+          if (!candidate.codeshares && existing.codeshares) candidate.codeshares = existing.codeshares;
+          offersByKey.set(key, candidate);
+        } else {
+          // Keep existing but merge missing details from candidate
+          if (!existing.terminal && candidate.terminal) existing.terminal = candidate.terminal;
+          if (!existing.arrivalTerminal && candidate.arrivalTerminal) existing.arrivalTerminal = candidate.arrivalTerminal;
+          if (!existing.aircraft && candidate.aircraft) existing.aircraft = candidate.aircraft;
+          if (!existing.distanceKm && candidate.distanceKm) existing.distanceKm = candidate.distanceKm;
+          if (!existing.codeshares && candidate.codeshares) existing.codeshares = candidate.codeshares;
         }
+      }
+    };
 
-        const cleanKey = `${opt.airlineCode || "6E"}_${String(opt.flightNumber || index).replace(/\s+/g, "")}_${opt.departureTimeLocal}`;
-        if (seenFingerprints.has(cleanKey)) {
-          return;
-        }
-        seenFingerprints.add(cleanKey);
-
-        const totalPrice = opt.price * (query.adults || 1);
-        const stops = opt.isDirect ? 0 : 1;
-        const fingerprint = `${query.origin}_${query.destination}_${opt.departureDateOnly}_${opt.airlineCode || "XX"}_${opt.flightNumber || "FL"}_${opt.departureTimeLocal || "00"}`;
-
-        const segment: FlightSegment = {
-          airline: opt.airline,
-          airlineCode: opt.airlineCode || "6E",
-          airlineLogo: `https://www.gstatic.com/flights/airline_logos/70px/${(opt.airlineCode || "6E").toUpperCase()}.png`,
-          flightNumber: opt.flightNumber || `${opt.airlineCode || "6E"} ${index + 101}`,
-          origin: query.origin,
-          originName: originInfo?.name,
-          destination: query.destination,
-          destinationName: destInfo?.name,
-          departureDate: opt.departureDateOnly,
-          departureTime: opt.departureTimeLocal,
-          arrivalDate: opt.arrivalDateOnly,
-          arrivalTime: opt.arrivalTimeLocal,
-          durationMinutes: opt.durationMinutes,
-          durationFormatted: opt.durationFormatted,
-        };
-
-        offers.push({
-          id: `offer_${fingerprint}_${index}`,
-          itineraryFingerprint: fingerprint,
-          airline: opt.airline,
-          airlineCode: opt.airlineCode || "6E",
-          airlineLogo: `https://www.gstatic.com/flights/airline_logos/70px/${(opt.airlineCode || "6E").toUpperCase()}.png`,
-          flightNumber: opt.flightNumber || `${opt.airlineCode || "6E"} ${index + 101}`,
-          originAirport: query.origin,
-          originCity: originInfo?.city || query.origin,
-          destinationAirport: query.destination,
-          destinationCity: destInfo?.city || query.destination,
-          departureDate: opt.departureDateOnly,
-          departureTime: opt.departureTimeLocal,
-          arrivalDate: opt.arrivalDateOnly,
-          arrivalTime: opt.arrivalTimeLocal,
-          durationMinutes: opt.durationMinutes,
-          durationFormatted: opt.durationFormatted,
-          stops,
-          stopsLabel: stops === 0 ? "Non-stop" : `${stops} Stop`,
-          segments: [segment],
-          price: totalPrice,
-          pricePerAdult: opt.price,
-          formattedPrice: formatCurrency(totalPrice, query.currency || "INR"),
-          currency: query.currency || "INR",
-          priceStatus: opt.priceStatus || "CACHED_PRICE",
-          priceStatusLabel: opt.priceStatus === "CACHED_PRICE" ? "Indexed Fare" : "Indicative Fare",
-          cabinClass: query.cabinClass || "economy",
-          baggageAllowance: "15 kg Check-in, 7 kg Cabin",
-          seller: opt.seller || "Aviasales Partner",
-          bookingUrl: opt.bookingUrl,
-          comparisonSites: comparisonSites.map((s) => ({ name: s.name, url: s.url })),
-          isOvernight: opt.isOvernight,
-          dayDifference: opt.dayDifference,
-          score: 100,
-        });
+    // 1. Process Google Flights (SerpApi) live offers
+    if (serpSettled.status === "fulfilled" && Array.isArray(serpSettled.value)) {
+      serpSettled.value.forEach((o) => {
+        o.provider = "google_flights";
+        addOrUpdateOffer(o);
       });
+    } else if (serpSettled.status === "rejected") {
+      console.error("SerpApi Google Flights error in parallel search:", serpSettled.reason);
     }
 
-    // 4. Enrich offers with OAG Aviation Intelligence (Terminals, Equipment, Distance, Codeshares)
-    if (OAGAdapter.isFlightInfoConfigured()) {
-      try {
-        const oagInstances = await OAGAdapter.lookupRouteInstances({
-          origin: query.origin,
-          destination: query.destination,
-          departureDate: query.departureDate,
-        });
+    // 2. Process Amadeus GDS live offers
+    if (amadeusSettled.status === "fulfilled" && Array.isArray(amadeusSettled.value)) {
+      amadeusSettled.value.forEach((o) => {
+        o.provider = "amadeus";
+        addOrUpdateOffer(o);
+      });
+    } else if (amadeusSettled.status === "rejected") {
+      console.error("Amadeus adapter error in parallel search:", amadeusSettled.reason);
+    }
 
-        if (oagInstances.length > 0) {
-          const extractDigits = (fn: string | number) => {
-            if (!fn) return "";
-            const stripped = String(fn).replace(/^[A-Za-z0-9]{2}\s+/, "").trim();
-            return stripped.replace(/\D/g, "") || stripped;
+    // 3. Process Travelpayouts / Aviasales indexed offers
+    if (travelpayoutsSettled.status === "fulfilled" && travelpayoutsSettled.value) {
+      const rawQuote = travelpayoutsSettled.value;
+      if (rawQuote.found && rawQuote.options && rawQuote.options.length > 0) {
+        rawQuote.options.forEach((opt, index) => {
+          if (!validateFlightMatchesRequestedDate(opt.departureDateOnly, query.departureDate)) {
+            return;
+          }
+
+          const totalPrice = opt.price * (query.adults || 1);
+          const stops = opt.isDirect ? 0 : 1;
+          const fingerprint = `${query.origin}_${query.destination}_${opt.departureDateOnly}_${opt.airlineCode || "XX"}_${opt.flightNumber || "FL"}_${opt.departureTimeLocal || "00"}`;
+
+          const segment: FlightSegment = {
+            airline: opt.airline,
+            airlineCode: opt.airlineCode || "6E",
+            airlineLogo: `https://www.gstatic.com/flights/airline_logos/70px/${(opt.airlineCode || "6E").toUpperCase()}.png`,
+            flightNumber: opt.flightNumber || `${opt.airlineCode || "6E"} ${index + 101}`,
+            origin: query.origin,
+            originName: originInfo?.name,
+            destination: query.destination,
+            destinationName: destInfo?.name,
+            departureDate: opt.departureDateOnly,
+            departureTime: opt.departureTimeLocal,
+            arrivalDate: opt.arrivalDateOnly,
+            arrivalTime: opt.arrivalTimeLocal,
+            durationMinutes: opt.durationMinutes,
+            durationFormatted: opt.durationFormatted,
           };
 
-          const oagMap = new Map<string, (typeof oagInstances)[0]>();
-          for (const inst of oagInstances) {
-            const cleanNum = extractDigits(inst.flightNumber);
-            oagMap.set(`${inst.carrierIata}_${cleanNum}`, inst);
-            if (!oagMap.has(cleanNum)) {
-              oagMap.set(cleanNum, inst);
-            }
-            if (inst.departureTimeLocal) {
-              oagMap.set(`${inst.carrierIata}_time_${inst.departureTimeLocal}`, inst);
-            }
-          }
+          const tpOffer: NormalizedFlightOffer = {
+            id: `offer_${fingerprint}_${index}`,
+            itineraryFingerprint: fingerprint,
+            airline: opt.airline,
+            airlineCode: opt.airlineCode || "6E",
+            airlineLogo: `https://www.gstatic.com/flights/airline_logos/70px/${(opt.airlineCode || "6E").toUpperCase()}.png`,
+            flightNumber: opt.flightNumber || `${opt.airlineCode || "6E"} ${index + 101}`,
+            originAirport: query.origin,
+            originCity: originInfo?.city || query.origin,
+            destinationAirport: query.destination,
+            destinationCity: destInfo?.city || query.destination,
+            departureDate: opt.departureDateOnly,
+            departureTime: opt.departureTimeLocal,
+            arrivalDate: opt.arrivalDateOnly,
+            arrivalTime: opt.arrivalTimeLocal,
+            durationMinutes: opt.durationMinutes,
+            durationFormatted: opt.durationFormatted,
+            stops,
+            stopsLabel: stops === 0 ? "Non-stop" : `${stops} Stop`,
+            segments: [segment],
+            price: totalPrice,
+            pricePerAdult: opt.price,
+            formattedPrice: formatCurrency(totalPrice, query.currency || "INR"),
+            currency: query.currency || "INR",
+            priceStatus: opt.priceStatus || "CACHED_PRICE",
+            priceStatusLabel: opt.priceStatus === "CACHED_PRICE" ? "Indexed Fare" : "Indicative Fare",
+            cabinClass: query.cabinClass || "economy",
+            baggageAllowance: "15 kg Check-in, 7 kg Cabin",
+            seller: opt.seller || "Aviasales Partner",
+            provider: "travelpayouts",
+            bookingUrl: opt.bookingUrl,
+            comparisonSites: comparisonSites.map((s) => ({ name: s.name, url: s.url })),
+            isOvernight: opt.isOvernight,
+            dayDifference: opt.dayDifference,
+            score: 100,
+          };
 
-          for (const offer of offers) {
-            const cleanNum = extractDigits(offer.flightNumber);
-            const match =
-              oagMap.get(`${offer.airlineCode}_${cleanNum}`) ||
-              oagMap.get(cleanNum) ||
-              (offer.departureTime ? oagMap.get(`${offer.airlineCode}_time_${offer.departureTime}`) : undefined);
+          addOrUpdateOffer(tpOffer);
+        });
+      }
+    } else if (travelpayoutsSettled.status === "rejected") {
+      console.error("Travelpayouts error in parallel search:", travelpayoutsSettled.reason);
+    }
 
-            if (match) {
-              if (match.departureTerminal) offer.terminal = match.departureTerminal;
-              if (match.arrivalTerminal) offer.arrivalTerminal = match.arrivalTerminal;
-              if (match.aircraftName) offer.aircraft = match.aircraftName;
-              if (match.distanceKm) offer.distanceKm = match.distanceKm;
-              if (match.codeshares && match.codeshares.length > 0) offer.codeshares = match.codeshares;
+    const offers = Array.from(offersByKey.values());
 
-              if (offer.segments && offer.segments[0]) {
-                const seg = offer.segments[0];
-                if (match.departureTerminal) seg.terminal = match.departureTerminal;
-                if (match.arrivalTerminal) seg.arrivalTerminal = match.arrivalTerminal;
-                if (match.aircraftName) seg.aircraft = match.aircraftName;
-                if (match.distanceKm) seg.distanceKm = match.distanceKm;
-                if (match.codeshares && match.codeshares.length > 0) seg.codeshares = match.codeshares;
-              }
-            }
+    // 4. Enrich offers with OAG Aviation Intelligence (Terminals, Equipment, Distance, Codeshares)
+    if (oagSettled.status === "fulfilled" && Array.isArray(oagSettled.value) && oagSettled.value.length > 0) {
+      const oagInstances = oagSettled.value;
+      const extractDigits = (fn: string | number) => {
+        if (!fn) return "";
+        const stripped = String(fn).replace(/^[A-Za-z0-9]{2}\s+/, "").trim();
+        return stripped.replace(/\D/g, "") || stripped;
+      };
+
+      const oagMap = new Map<string, (typeof oagInstances)[0]>();
+      for (const inst of oagInstances) {
+        const cleanNum = extractDigits(inst.flightNumber);
+        oagMap.set(`${inst.carrierIata}_${cleanNum}`, inst);
+        if (!oagMap.has(cleanNum)) {
+          oagMap.set(cleanNum, inst);
+        }
+        if (inst.departureTimeLocal) {
+          oagMap.set(`${inst.carrierIata}_time_${inst.departureTimeLocal}`, inst);
+        }
+      }
+
+      for (const offer of offers) {
+        const cleanNum = extractDigits(offer.flightNumber);
+        const match =
+          oagMap.get(`${offer.airlineCode}_${cleanNum}`) ||
+          oagMap.get(cleanNum) ||
+          (offer.departureTime ? oagMap.get(`${offer.airlineCode}_time_${offer.departureTime}`) : undefined);
+
+        if (match) {
+          if (match.departureTerminal) offer.terminal = match.departureTerminal;
+          if (match.arrivalTerminal) offer.arrivalTerminal = match.arrivalTerminal;
+          if (match.aircraftName) offer.aircraft = match.aircraftName;
+          if (match.distanceKm) offer.distanceKm = match.distanceKm;
+          if (match.codeshares && match.codeshares.length > 0) offer.codeshares = match.codeshares;
+
+          if (offer.segments && offer.segments[0]) {
+            const seg = offer.segments[0];
+            if (match.departureTerminal) seg.terminal = match.departureTerminal;
+            if (match.arrivalTerminal) seg.arrivalTerminal = match.arrivalTerminal;
+            if (match.aircraftName) seg.aircraft = match.aircraftName;
+            if (match.distanceKm) seg.distanceKm = match.distanceKm;
+            if (match.codeshares && match.codeshares.length > 0) seg.codeshares = match.codeshares;
           }
         }
-      } catch (err) {
-        console.error("OAG route instance enrichment error:", err);
       }
     }
 

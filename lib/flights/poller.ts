@@ -36,7 +36,10 @@ export interface PollCycleResult {
  * Updates monitored_routes, tracked_flights, and price_history.
  * Dispatches Telegram, Email, and Push notifications when price alert criteria are met.
  */
-export async function pollSingleRoute(routeId: string): Promise<PollRouteResult> {
+export async function pollSingleRoute(
+  routeId: string,
+  options?: { forceAlerts?: boolean }
+): Promise<PollRouteResult> {
   const supabase = createAdminClient();
 
   const { data: route, error: fetchErr } = await supabase
@@ -108,12 +111,12 @@ export async function pollSingleRoute(routeId: string): Promise<PollRouteResult>
       };
     }
 
-    // Lowest overall fare on route
+    // Lowest overall fare on route across all providers
     const bestOffer = offers[0];
     const bestPrice = bestOffer.price;
     const airline = bestOffer.airlineCode || bestOffer.airline;
     const bookingUrl = bestOffer.bookingUrl || null;
-    const provider = "google_flights";
+    const provider = bestOffer.provider || "google_flights";
 
     // 1. Update monitored_routes table
     await supabase
@@ -122,6 +125,7 @@ export async function pollSingleRoute(routeId: string): Promise<PollRouteResult>
         last_price: bestPrice,
         last_airline: airline,
         last_booking_url: bookingUrl,
+        provider,
         last_checked_at: nowIso,
         next_check_at: nextCheckIso,
         failure_count: 0,
@@ -192,6 +196,7 @@ export async function pollSingleRoute(routeId: string): Promise<PollRouteResult>
       .eq("profiles.is_banned", false);
 
     let notificationsSent = 0;
+    const forceAlerts = Boolean(options?.forceAlerts);
 
     for (const tracker of subscribers || []) {
       const profile = Array.isArray(tracker.profiles) ? tracker.profiles[0] : tracker.profiles;
@@ -213,11 +218,11 @@ export async function pollSingleRoute(routeId: string): Promise<PollRouteResult>
 
       // Condition A: Urgent Price Drop (price dropped below target alert or dropped further)
       const isPriceDrop = currentPrice <= targetPrice;
-      const isRoutineDue = !tracker.last_notified_at || hoursSinceAlert >= 3.5;
 
       if (isPriceDrop) {
-        // Did price drop lower than last notification, or has cooldown elapsed?
+        // Did price drop lower than last notification, or has cooldown elapsed, or forced by admin?
         const shouldAlertDrop =
+          forceAlerts ||
           lastNotifiedPrice === null ||
           currentPrice < lastNotifiedPrice ||
           hoursSinceAlert >= 4;
@@ -225,7 +230,7 @@ export async function pollSingleRoute(routeId: string): Promise<PollRouteResult>
         if (shouldAlertDrop) {
           notificationsSent++;
 
-          // Send Telegram Alert
+          // 1. Send Telegram Alert
           if (telegramChatId) {
             const savings = Math.max(0, targetPrice - currentPrice);
             const tgMsg = [
@@ -248,7 +253,7 @@ export async function pollSingleRoute(routeId: string): Promise<PollRouteResult>
             sendTelegramAlert({ chatId: telegramChatId, text: tgMsg }).catch(() => {});
           }
 
-          // Send Email Alert
+          // 2. Send Email Alert
           if (userEmail) {
             sendEmail({
               to: userEmail,
@@ -266,7 +271,7 @@ export async function pollSingleRoute(routeId: string): Promise<PollRouteResult>
             }).catch(() => {});
           }
 
-          // Send Native Browser Push
+          // 3. Send Native Browser Push Alert
           sendPushToUser(tracker.user_id, {
             title: `🚨 Price Drop: ${tracker.origin} → ${tracker.destination}`,
             body: `Now ${tracker.currency} ${Number(currentPrice).toLocaleString()} (Target: ${tracker.currency} ${Number(targetPrice).toLocaleString()}). Tap to book!`,
@@ -277,10 +282,13 @@ export async function pollSingleRoute(routeId: string): Promise<PollRouteResult>
           await supabase.from("notification_logs").insert({
             user_id: tracker.user_id,
             tracker_id: tracker.id,
+            route_id: route.id,
             notification_type: "price_drop",
+            previous_price: lastNotifiedPrice,
             current_price: currentPrice,
             currency: tracker.currency,
             delivery_status: "sent",
+            idempotency_key: crypto.randomUUID(),
             sent_at: nowIso,
             is_read: false,
           });
@@ -294,63 +302,82 @@ export async function pollSingleRoute(routeId: string): Promise<PollRouteResult>
             })
             .eq("id", tracker.id);
         }
-      } else if (isRoutineDue) {
-        // Condition B: Routine 4-Hour Radar Update (fare is still above target, but update user)
-        notificationsSent++;
+      } else {
+        // Condition B: Routine 4-Hour Radar Update (fare is still above target, keeping user updated)
+        const isRoutineDue =
+          forceAlerts ||
+          !tracker.last_notified_at ||
+          hoursSinceAlert >= 3.5;
 
-        if (telegramChatId) {
-          const diff = currentPrice - targetPrice;
-          const tgMsg = [
-            "⏱️ <b>4-HOUR RADAR SCAN UPDATE</b>",
-            "",
-            `Route: <b>${tracker.origin} → ${tracker.destination}</b>`,
-            `Departure: <b>${tracker.departure_date}</b>`,
-            `Current Rate: <b>${tracker.currency} ${formatCurrency(currentPrice, tracker.currency)}</b> (${airline})`,
-            `Your Target: <b>${tracker.currency} ${formatCurrency(targetPrice, tracker.currency)}</b> (+${tracker.currency} ${formatCurrency(diff, tracker.currency)})`,
-            "",
-            "AeroDrop scanned 100+ airline catalogs in this 4-hour cycle. We will alert you immediately once fares drop below your target!",
-          ].join("\n");
+        if (isRoutineDue) {
+          notificationsSent++;
 
-          sendTelegramAlert({ chatId: telegramChatId, text: tgMsg }).catch(() => {});
-        }
+          // 1. Send Telegram Alert
+          if (telegramChatId) {
+            const diff = currentPrice - targetPrice;
+            const tgMsg = [
+              "⏱️ <b>4-HOUR RADAR SCAN UPDATE</b>",
+              "",
+              `Route: <b>${tracker.origin} → ${tracker.destination}</b>`,
+              `Departure: <b>${tracker.departure_date}</b>`,
+              `Current Rate: <b>${tracker.currency} ${formatCurrency(currentPrice, tracker.currency)}</b> (${airline})`,
+              `Your Target: <b>${tracker.currency} ${formatCurrency(targetPrice, tracker.currency)}</b> (+${tracker.currency} ${formatCurrency(diff, tracker.currency)})`,
+              "",
+              "AeroDrop scanned 100+ airline catalogs in this 4-hour cycle. We will alert you immediately once fares drop below your target!",
+            ].join("\n");
 
-        if (userEmail) {
-          sendEmail({
-            to: userEmail,
-            subject: `⏱️ 4-Hour Flight Status: ${tracker.origin} → ${tracker.destination}`,
-            html: buildRoutineStatusUpdateEmail({
-              origin: tracker.origin,
-              destination: tracker.destination,
-              departureDate: tracker.departure_date,
-              currentPrice,
-              targetPrice,
-              currency: tracker.currency,
-              airline,
-              bookingUrl: bookingUrl || undefined,
-            }),
+            sendTelegramAlert({ chatId: telegramChatId, text: tgMsg }).catch(() => {});
+          }
+
+          // 2. Send Email Alert
+          if (userEmail) {
+            sendEmail({
+              to: userEmail,
+              subject: `⏱️ 4-Hour Flight Status: ${tracker.origin} → ${tracker.destination}`,
+              html: buildRoutineStatusUpdateEmail({
+                origin: tracker.origin,
+                destination: tracker.destination,
+                departureDate: tracker.departure_date,
+                currentPrice,
+                targetPrice,
+                currency: tracker.currency,
+                airline,
+                bookingUrl: bookingUrl || undefined,
+              }),
+            }).catch(() => {});
+          }
+
+          // 3. Send Native Browser Push Alert
+          sendPushToUser(tracker.user_id, {
+            title: `⏱️ 4-Hour Radar: ${tracker.origin} → ${tracker.destination}`,
+            body: `Current rate: ${tracker.currency} ${Number(currentPrice).toLocaleString()} (${airline}). Actively monitoring 100+ airlines!`,
+            url: "/dashboard",
           }).catch(() => {});
+
+          // Record in-app notification
+          await supabase.from("notification_logs").insert({
+            user_id: tracker.user_id,
+            tracker_id: tracker.id,
+            route_id: route.id,
+            notification_type: "status_update",
+            previous_price: lastNotifiedPrice,
+            current_price: currentPrice,
+            currency: tracker.currency,
+            delivery_status: "sent",
+            idempotency_key: crypto.randomUUID(),
+            sent_at: nowIso,
+            is_read: false,
+          });
+
+          // Update tracker notification state
+          await supabase
+            .from("tracked_flights")
+            .update({
+              last_notified_price: currentPrice,
+              last_notified_at: nowIso,
+            })
+            .eq("id", tracker.id);
         }
-
-        // Record in-app notification
-        await supabase.from("notification_logs").insert({
-          user_id: tracker.user_id,
-          tracker_id: tracker.id,
-          notification_type: "status_update",
-          current_price: currentPrice,
-          currency: tracker.currency,
-          delivery_status: "sent",
-          sent_at: nowIso,
-          is_read: false,
-        });
-
-        // Update tracker notification state
-        await supabase
-          .from("tracked_flights")
-          .update({
-            last_notified_price: currentPrice,
-            last_notified_at: nowIso,
-          })
-          .eq("id", tracker.id);
       }
     }
 
@@ -394,6 +421,7 @@ export async function pollSingleRoute(routeId: string): Promise<PollRouteResult>
 export async function pollAllDueRoutes(options?: {
   limit?: number;
   forceAll?: boolean;
+  forceAlerts?: boolean;
 }): Promise<PollCycleResult> {
   const supabase = createAdminClient();
   const limit = options?.limit || 25;
@@ -438,7 +466,9 @@ export async function pollAllDueRoutes(options?: {
     const details: PollRouteResult[] = [];
 
     for (const route of routes) {
-      const res = await pollSingleRoute(route.id);
+      const res = await pollSingleRoute(route.id, {
+        forceAlerts: options?.forceAlerts,
+      });
       details.push(res);
       if (res.ok) {
         succeeded++;

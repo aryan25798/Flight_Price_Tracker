@@ -37,7 +37,12 @@ export async function adminActionDispatch(
 
   if (payload.action === "trigger_poll") {
     // 1. Run full multi-provider polling cycle across all active routes (SerpApi + OAG + Travelpayouts)
-    const pollResult = await pollAllDueRoutes({ forceAll: true, limit: 50 });
+    // When manually triggered by super_admin, forceAlerts: true ensures all active trackers dispatch notifications across all 3 channels
+    const pollResult = await pollAllDueRoutes({
+      forceAll: true,
+      forceAlerts: true,
+      limit: 50,
+    });
 
     // 2. Dual-dispatch to edge function for audit logging and Supabase sync
     callAdminEdgeFunction(payload).catch((err) =>
