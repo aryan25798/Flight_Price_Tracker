@@ -1,6 +1,6 @@
 import { z } from "https://esm.sh/zod@3.24.2";
 import { errorResponse, handleCors, jsonResponse } from "../_shared/cors.ts";
-import { requireAuthenticatedUser } from "../_shared/supabase.ts";
+import { createServiceClient, requireAuthenticatedUser } from "../_shared/supabase.ts";
 import { sendTelegramMessage, sha256Hex } from "../_shared/telegram.ts";
 
 const TelegramLinkRequestSchema = z.discriminatedUnion("action", [
@@ -29,99 +29,124 @@ Deno.serve(async (req: Request) => {
     return errorResponse("Method not allowed", 405);
   }
 
-  const authCheck = await requireAuthenticatedUser(req);
-  if (!authCheck.ok) {
-    return errorResponse(authCheck.message, authCheck.status);
-  }
-
-  const { profile, supabaseAdmin } = authCheck.ctx;
-
-  let rawBody: unknown;
   try {
-    rawBody = await req.json();
-  } catch {
-    return errorResponse("Invalid JSON payload", 400);
-  }
+    // Allow service_role key authentication for internal backend server dispatch (e.g. Next.js poller / cron)
+    const authHeader = req.headers.get("Authorization");
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const isServiceRole = Boolean(serviceRoleKey && authHeader === `Bearer ${serviceRoleKey}`);
 
-  const parsed = TelegramLinkRequestSchema.safeParse(rawBody);
-  if (!parsed.success) {
-    return errorResponse("Invalid action", 400);
-  }
+    let profile: { id: string; email: string; role: "user" | "super_admin"; is_banned: boolean; telegram_chat_id: string | null } | null = null;
+    let supabaseAdmin: ReturnType<typeof createServiceClient>;
 
-  if (parsed.data.action === "generate_link") {
-    const botUsername = Deno.env.get("TELEGRAM_BOT_USERNAME");
-    if (!botUsername) {
-      return errorResponse("TELEGRAM_BOT_USERNAME is not configured", 500);
+    if (isServiceRole) {
+      supabaseAdmin = createServiceClient();
+    } else {
+      const authCheck = await requireAuthenticatedUser(req);
+      if (!authCheck.ok) {
+        return errorResponse(authCheck.message, authCheck.status);
+      }
+      profile = authCheck.ctx.profile;
+      supabaseAdmin = authCheck.ctx.supabaseAdmin;
     }
 
-    const token = generateRandomHexToken(24); // 48-char hex token (within Telegram's 64-char /start limit)
-    const tokenHash = await sha256Hex(token);
-    const expiresAt = new Date(Date.now() + 15 * 60_000).toISOString();
+    let rawBody: unknown;
+    try {
+      rawBody = await req.json();
+    } catch {
+      return errorResponse("Invalid JSON payload", 400);
+    }
 
-    const { error } = await supabaseAdmin
-      .from("profiles")
-      .update({
-        telegram_link_token_hash: tokenHash,
-        telegram_link_expires_at: expiresAt,
-      })
-      .eq("id", profile.id);
+    const parsed = TelegramLinkRequestSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return errorResponse("Invalid action", 400);
+    }
 
-    if (error) {
-      return errorResponse("Failed to generate Telegram link token", 500);
+    if (parsed.data.action === "generate_link") {
+      if (!profile) {
+        return errorResponse("User context required to generate linking token", 400);
+      }
+
+      const botUsername = Deno.env.get("TELEGRAM_BOT_USERNAME");
+      if (!botUsername) {
+        return errorResponse("TELEGRAM_BOT_USERNAME is not configured", 500);
+      }
+
+      const token = generateRandomHexToken(24); // 48-char hex token (within Telegram's 64-char /start limit)
+      const tokenHash = await sha256Hex(token);
+      const expiresAt = new Date(Date.now() + 15 * 60_000).toISOString();
+
+      const { error } = await supabaseAdmin
+        .from("profiles")
+        .update({
+          telegram_link_token_hash: tokenHash,
+          telegram_link_expires_at: expiresAt,
+        })
+        .eq("id", profile.id);
+
+      if (error) {
+        return errorResponse("Failed to generate Telegram link token", 500);
+      }
+
+      return jsonResponse({
+        deep_link: `https://t.me/${botUsername}?start=${token}`,
+        expires_at: expiresAt,
+      });
+    }
+
+    if (parsed.data.action === "send_message") {
+      if (!isServiceRole) {
+        if (!profile || (parsed.data.chatId !== profile.telegram_chat_id && profile.role !== "super_admin")) {
+          return errorResponse("Forbidden: Cannot dispatch to unverified chat", 403);
+        }
+      }
+      const res = await sendTelegramMessage(parsed.data.chatId, parsed.data.text);
+      return jsonResponse({ ok: res.ok, error: res.error });
+    }
+
+    // action === "send_test"
+    if (!profile) {
+      return errorResponse("User context required to send test", 400);
+    }
+    if (!profile.telegram_chat_id) {
+      return errorResponse("Telegram account is not linked yet", 400);
+    }
+
+    const testHtml = [
+      "✈️ <b>TEST NOTIFICATION</b>",
+      "",
+      "Your Flight Price Drop Tracker is connected to this Telegram chat.",
+      "You will receive instant alerts here whenever a tracked route drops below your target price.",
+    ].join("\n");
+
+    const idempotencyKey = await sha256Hex(
+      `test:${profile.id}:${Math.floor(Date.now() / 10_000)}`,
+    );
+
+    const tgResult = await sendTelegramMessage(profile.telegram_chat_id, testHtml);
+    const nowIso = new Date().toISOString();
+
+    await supabaseAdmin.from("notification_logs").upsert(
+      {
+        user_id: profile.id,
+        notification_type: "test",
+        delivery_status: tgResult.ok ? "sent" : "failed",
+        telegram_message_id: tgResult.messageId ?? null,
+        idempotency_key: idempotencyKey,
+        error_message: tgResult.error ?? null,
+        sent_at: tgResult.ok ? nowIso : null,
+      },
+      { onConflict: "idempotency_key" },
+    );
+
+    if (!tgResult.ok) {
+      return errorResponse(tgResult.error ?? "Failed to send test notification", 502);
     }
 
     return jsonResponse({
-      deep_link: `https://t.me/${botUsername}?start=${token}`,
-      expires_at: expiresAt,
+      success: true,
+      sent_at: nowIso,
     });
+  } catch (err) {
+    return errorResponse(err instanceof Error ? err.message : String(err), 500);
   }
-
-  if (parsed.data.action === "send_message") {
-    if (parsed.data.chatId !== profile.telegram_chat_id && profile.role !== "super_admin") {
-      return errorResponse("Forbidden: Cannot dispatch to unverified chat", 403);
-    }
-    const res = await sendTelegramMessage(parsed.data.chatId, parsed.data.text);
-    return jsonResponse({ ok: res.ok, error: res.error });
-  }
-
-  // action === "send_test"
-  if (!profile.telegram_chat_id) {
-    return errorResponse("Telegram account is not linked yet", 400);
-  }
-
-  const testHtml = [
-    "✈️ <b>TEST NOTIFICATION</b>",
-    "",
-    "Your Flight Price Drop Tracker is connected to this Telegram chat.",
-    "You will receive instant alerts here whenever a tracked route drops below your target price.",
-  ].join("\n");
-
-  const idempotencyKey = await sha256Hex(
-    `test:${profile.id}:${Math.floor(Date.now() / 10_000)}`,
-  );
-
-  const tgResult = await sendTelegramMessage(profile.telegram_chat_id, testHtml);
-  const nowIso = new Date().toISOString();
-
-  await supabaseAdmin.from("notification_logs").upsert(
-    {
-      user_id: profile.id,
-      notification_type: "test",
-      delivery_status: tgResult.ok ? "sent" : "failed",
-      telegram_message_id: tgResult.messageId ?? null,
-      idempotency_key: idempotencyKey,
-      error_message: tgResult.error ?? null,
-      sent_at: tgResult.ok ? nowIso : null,
-    },
-    { onConflict: "idempotency_key" },
-  );
-
-  if (!tgResult.ok) {
-    return errorResponse(tgResult.error ?? "Failed to send test notification", 502);
-  }
-
-  return jsonResponse({
-    success: true,
-    sent_at: nowIso,
-  });
 });

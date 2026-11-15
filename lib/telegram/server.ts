@@ -32,27 +32,30 @@ export async function sendTelegramAlert({
     }
   }
 
-  // 2. Fallback to Supabase telegram-link edge function (which has TELEGRAM_BOT_TOKEN secret)
+  // 2. Dispatch via Supabase telegram-link edge function (which has TELEGRAM_BOT_TOKEN secret)
   try {
-    let accessToken: string | null = null;
-    try {
-      const supabase = await createClient();
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      accessToken = session?.access_token || null;
-    } catch {
-      // Outside request context (e.g. background poller or cron worker)
+    let authToken = process.env.SUPABASE_SERVICE_ROLE_KEY || null;
+
+    if (!authToken) {
+      try {
+        const supabase = await createClient();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        authToken = session?.access_token || null;
+      } catch {
+        // Outside request context
+      }
     }
 
     const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    if (!baseUrl || !accessToken) return false;
+    if (!baseUrl || !authToken) return false;
 
     const res = await fetch(`${baseUrl}/functions/v1/telegram-link`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
+        Authorization: `Bearer ${authToken}`,
       },
       body: JSON.stringify({
         action: "send_message",
@@ -62,7 +65,11 @@ export async function sendTelegramAlert({
     });
 
     const json = await res.json().catch(() => ({}));
-    return Boolean(json?.ok);
+    if (json?.ok) return true;
+    if (json?.error) {
+      console.warn("telegram-link edge dispatch warning:", json.error);
+    }
+    return false;
   } catch (err) {
     console.error("Failed to dispatch telegram notification:", err);
     return false;
